@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/useAuth';
 import { subscribeToChannelMessages, sendMessage, getTypingUsers } from '../../../features/chat/api';
 import { Channel } from '../../../types/channel';
-import { Message } from '../../../types/message';
+import { Message, Attachment } from '../../../types/message';
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import ChannelHeader from '../../../components/layout/ChannelHeader';
@@ -114,7 +114,7 @@ const ChannelPage: React.FC = () => {
     };
   }, [resolvedId, user?.id]);
 
-  const handleSendMessage = async (content: string, attachments?: import('../../../types/message').Attachment[]) => {
+  const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
     if (user && channel) {
       await sendMessage(user.id, content, channel.id, undefined, attachments);
     }

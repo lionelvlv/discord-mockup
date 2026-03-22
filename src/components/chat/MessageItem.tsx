@@ -190,8 +190,6 @@ const AttachmentRenderer: React.FC<{ attachment: Attachment }> = ({ attachment }
           controls
           preload="metadata"
           className="attachment-video"
-          // Prevent leaking referrer to video host
-          referrerPolicy="no-referrer"
         >
           <source src={url} type={type} />
           Your browser does not support video playback.
@@ -207,7 +205,7 @@ const AttachmentRenderer: React.FC<{ attachment: Attachment }> = ({ attachment }
         <span className="attachment-audio-icon">🎵</span>
         <div className="attachment-audio-info">
           <div className="attachment-filename">{name}</div>
-          <audio controls preload="metadata" className="attachment-audio" referrerPolicy="no-referrer">
+          <audio controls preload="metadata" className="attachment-audio">
             <source src={url} type={type} />
           </audio>
         </div>

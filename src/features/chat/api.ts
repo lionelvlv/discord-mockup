@@ -13,15 +13,15 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { Message } from '../../types/message';
+import { Message, Attachment, Reaction } from '../../types/message';
 import { storage } from '../../lib/storage';
-import { Reaction } from '../../types/message';
+
 export const sendMessage = async (
   senderId: string,
   content: string,
   channelId?: string,
   dmId?: string,
-  attachments?: import('../types/message').Attachment[]
+  attachments?: Attachment[]
 ): Promise<Message> => {
   const messageData = {
     senderId,

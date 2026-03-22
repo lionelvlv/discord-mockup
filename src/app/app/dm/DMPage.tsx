@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/useAuth';
 import { getOrCreateDM, markDMSeen } from '../../../features/chat/dmApi';
 import { subscribeToDMMessages, sendMessage, getTypingUsers } from '../../../features/chat/api';
-import { Message } from '../../../types/message';
+import { Message, Attachment } from '../../../types/message';
 import { User } from '../../../types/user';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
@@ -87,7 +87,7 @@ const DMPage: React.FC = () => {
     };
   }, [userId, currentUser?.id]);
 
-  const handleSendMessage = async (content: string, attachments?: import('../../../types/message').Attachment[]) => {
+  const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
     if (currentUser && dmId) {
       await sendMessage(currentUser.id, content, undefined, dmId, attachments);
       await markDMSeen(dmId, currentUser.id);
