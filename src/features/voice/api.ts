@@ -189,7 +189,7 @@ export const subscribeToSignals = (
       .filter((c: any) => c.type === 'added')
       .sort((a: any, b: any) => (a.doc.data().timestamp ?? 0) - (b.doc.data().timestamp ?? 0));
 
-    added.forEach(async (change) => {
+    added.forEach(async (change: any) => {
       const signal = { id: change.doc.id, ...change.doc.data() } as SignalingData;
       callback(signal);
       // Delete immediately after reading so signals don't replay on reconnect
