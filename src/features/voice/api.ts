@@ -80,7 +80,7 @@ export const subscribeToVoiceChannel = (
   callback: (participants: string[]) => void
 ): Unsubscribe => {
   const voiceRef = doc(db, 'voiceChannels', channelId);
-  return onSnapshot(voiceRef, (snap) => {
+  return onSnapshot(voiceRef, (snap: any) => {
     callback(snap.exists() ? (snap.data() as VoiceChannel).participants || [] : []);
   });
 };
@@ -92,7 +92,7 @@ export const subscribeToVoicePresence = (
   onPresenceChange: (connectedUserIds: Set<string>) => void
 ): (() => void) => {
   const channelRef = rtdbRef(rtdb, `voicePresence/${channelId}`);
-  const handler = onValue(channelRef, (snap) => {
+  const handler = onValue(channelRef, (snap: any) => {
     const data = snap.val() as Record<string, boolean> | null;
     onPresenceChange(new Set(data ? Object.keys(data) : []));
   });
@@ -183,21 +183,21 @@ export const subscribeToSignals = (
     where('channelId', '==', channelId),
     limit(50)
   );
-  return onSnapshot(q, (snap) => {
+  return onSnapshot(q, (snap: any) => {
     // Sort added signals by timestamp ascending before processing
     const added = snap.docChanges()
-      .filter((c) => c.type === 'added')
-      .sort((a, b) => (a.doc.data().timestamp ?? 0) - (b.doc.data().timestamp ?? 0));
+      .filter((c: any) => c.type === 'added')
+      .sort((a: any, b: any) => (a.doc.data().timestamp ?? 0) - (b.doc.data().timestamp ?? 0));
 
     added.forEach(async (change) => {
       const signal = { id: change.doc.id, ...change.doc.data() } as SignalingData;
       callback(signal);
       // Delete immediately after reading so signals don't replay on reconnect
-      await deleteDoc(doc(db, 'signaling', change.doc.id)).catch((err) => {
+      await deleteDoc(doc(db, 'signaling', change.doc.id)).catch((err: any) => {
         console.warn('[Voice] Could not delete signaling doc:', err);
       });
     });
-  }, (err) => {
+  }, (err: any) => {
     console.error('[Voice] subscribeToSignals error:', err);
   });
 };

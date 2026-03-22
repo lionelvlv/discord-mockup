@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/useAuth';
 import { subscribeToChannelMessages, sendMessage, getTypingUsers } from '../../../features/chat/api';
 import { Channel } from '../../../types/channel';
@@ -15,6 +15,8 @@ import './channel.css';
 const ChannelPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightMessageId = searchParams.get('highlight') ?? undefined;
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -116,7 +118,7 @@ const ChannelPage: React.FC = () => {
 
   const handleSendMessage = async (content: string, attachments?: Attachment[]) => {
     if (user && channel) {
-      await sendMessage(user.id, content, channel.id, undefined, attachments);
+      await sendMessage(user.id, content, channel.id, undefined, attachments, user.username, channel.name);
     }
   };
 
@@ -143,7 +145,11 @@ const ChannelPage: React.FC = () => {
         description={channel.description}
       />
       <div className="channel-content">
-        <MessageList messages={messages} />
+        <MessageList
+          messages={messages}
+          highlightMessageId={highlightMessageId}
+          onHighlightClear={() => setSearchParams({})}
+        />
         <TypingIndicator userIds={typingUsers} />
         <MessageComposer
           onSend={handleSendMessage}

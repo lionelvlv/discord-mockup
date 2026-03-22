@@ -8,7 +8,7 @@ export interface ServerSettings {
 const REF = () => doc(db, 'serverSettings', 'main');
 
 export function subscribeToServerSettings(cb: (s: ServerSettings) => void): Unsubscribe {
-  return onSnapshot(REF(), snap => {
+  return onSnapshot(REF(), (snap: any) => {
     cb(snap.exists() ? (snap.data() as ServerSettings) : { name: 'RETROCHORD' });
   });
 }

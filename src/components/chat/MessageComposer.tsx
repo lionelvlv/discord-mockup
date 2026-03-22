@@ -7,6 +7,9 @@ import {
   MAX_FILES_PER_MESSAGE,
 } from '../../lib/mediaUpload';
 import { Attachment } from '../../types/message';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { User } from '../../types/user';
 import GifPicker from './GifPicker';
 import EmojiPicker from './EmojiPicker';
 import './MessageComposer.css';
@@ -34,9 +37,15 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
   const [dragOver, setDragOver] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // Mention autocomplete
+  const [users, setUsers] = useState<User[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([]);
+  const [mentionIndex, setMentionIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const composerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Close pickers when user clicks anywhere outside the composer
   useEffect(() => {
@@ -59,6 +68,52 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Subscribe to users for mention autocomplete
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'users'), snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() } as User)).filter(u => !u.isDeleted));
+    });
+    return unsub;
+  }, []);
+
+  // Parse @mention trigger from message
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const cursor = textarea.selectionStart ?? message.length;
+    const textBefore = message.slice(0, cursor);
+    const match = textBefore.match(/@([a-zA-Z0-9_]*)$/);
+    if (match) {
+      const q = match[1].toLowerCase();
+      setMentionQuery(q);
+      const filtered = users
+        .filter(u => u.id !== user?.id && u.username.toLowerCase().includes(q))
+        .slice(0, 6);
+      setMentionSuggestions(filtered);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+      setMentionSuggestions([]);
+    }
+  }, [message, users, user?.id]);
+
+  const insertMention = (username: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const cursor = textarea.selectionStart ?? message.length;
+    const textBefore = message.slice(0, cursor);
+    const replaced = textBefore.replace(/@([a-zA-Z0-9_]*)$/, `@${username} `);
+    const newMsg = replaced + message.slice(cursor);
+    setMessage(newMsg);
+    setMentionQuery(null);
+    setMentionSuggestions([]);
+    setTimeout(() => {
+      textarea.focus();
+      const pos = replaced.length;
+      textarea.setSelectionRange(pos, pos);
+    }, 0);
+  };
 
   const addFiles = useCallback(async (files: File[]) => {
     if (!user) return;
@@ -159,6 +214,17 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Mention autocomplete navigation
+    if (mentionSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => Math.min(i + 1, mentionSuggestions.length - 1)); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setMentionIndex(i => Math.max(i - 1, 0)); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertMention(mentionSuggestions[mentionIndex]?.username ?? '');
+        return;
+      }
+      if (e.key === 'Escape') { setMentionQuery(null); setMentionSuggestions([]); return; }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
@@ -275,15 +341,33 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
           GIF
         </button>
 
-        <textarea
-          className="composer-input textarea-95"
-          value={message}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={dragOver ? 'Drop files here…' : 'Type a message… (Enter to send, Shift+Enter for new line)'}
-          rows={2}
-        />
+        <div style={{ flex: 1, position: 'relative' }}>
+          {/* Mention autocomplete dropdown */}
+          {mentionSuggestions.length > 0 && (
+            <div className="mention-dropdown panel">
+              {mentionSuggestions.map((u, i) => (
+                <button
+                  key={u.id}
+                  className={`mention-item ${i === mentionIndex ? 'active' : ''}`}
+                  onMouseDown={e => { e.preventDefault(); insertMention(u.username); }}
+                >
+                  <span className="mention-avatar">{u.avatarUrl.startsWith('http') ? '👤' : u.avatarUrl}</span>
+                  <span className="mention-username">@{u.username}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            className="composer-input textarea-95"
+            value={message}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={dragOver ? 'Drop files here…' : 'Type a message… (Enter to send, Shift+Enter for new line)'}
+            rows={2}
+          />
+        </div>
 
         <button
           type="submit"

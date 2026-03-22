@@ -97,7 +97,7 @@ const AppInner: React.FC = () => {
 
       {/* ── Right rail ─────────────────────────────────────────────────────── */}
       <div className="right-section">
-        <RightRail />
+        <RightRail onNavigate={handleNavigate} />
       </div>
 
       {/* ── Mobile bottom nav ──────────────────────────────────────────────── */}

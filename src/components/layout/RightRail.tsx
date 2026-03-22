@@ -3,15 +3,13 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { User } from '../../types/user';
 import MemberList from '../lists/MemberList';
+import NotificationBell from './NotificationBell';
 import './RightRail.css';
 
-const RightRail: React.FC = () => {
+const RightRail: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
   const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
-    // Subscribe to all users and count online client-side.
-    // Compound Firestore queries (isDeleted==false AND presence==online) miss docs
-    // where either field is absent (legacy accounts), giving a falsely-low count.
     console.log('[RightRail] Subscribing to online users');
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
       const count = snap.docs.filter((d) => {
@@ -28,7 +26,10 @@ const RightRail: React.FC = () => {
     <div className="right-rail panel">
       <div className="online-count-header">
         <span className="pixel-font">MEMBERS</span>
-        <span className="online-badge">{onlineCount} online</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span className="online-badge">{onlineCount} online</span>
+          <NotificationBell onNavigate={onNavigate} />
+        </div>
       </div>
       <MemberList />
     </div>

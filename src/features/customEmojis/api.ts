@@ -67,9 +67,9 @@ export async function addCustomEmoji(
 export function subscribeToCustomEmojis(
   cb: (emojis: CustomEmoji[]) => void
 ): Unsubscribe {
-  return onSnapshot(collection(db, 'customEmojis'), snap => {
-    const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomEmoji));
-    list.sort((a, b) => a.username.localeCompare(b.username) || a.createdAt - b.createdAt);
+  return onSnapshot(collection(db, 'customEmojis'), (snap: any) => {
+    const list = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as CustomEmoji));
+    list.sort((a: CustomEmoji, b: CustomEmoji) => a.username.localeCompare(b.username) || a.createdAt - b.createdAt);
     cb(list);
   });
 }

@@ -94,12 +94,12 @@ export const subscribeToActiveDMs = (
   const q1 = query(collection(db, 'directMessages'), where('userA', '==', userId));
   const q2 = query(collection(db, 'directMessages'), where('userB', '==', userId));
 
-  const unsub1 = onSnapshot(q1, (snap) => {
-    results.a = snap.docs.map((d) => d.data() as DM);
+  const unsub1 = onSnapshot(q1, (snap: any) => {
+    results.a = snap.docs.map((d: any) => d.data() as DM);
     merge();
   });
-  const unsub2 = onSnapshot(q2, (snap) => {
-    results.b = snap.docs.map((d) => d.data() as DM);
+  const unsub2 = onSnapshot(q2, (snap: any) => {
+    results.b = snap.docs.map((d: any) => d.data() as DM);
     merge();
   });
 

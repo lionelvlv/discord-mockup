@@ -176,3 +176,38 @@
   background: var(--surface-4);
   border-style: inset;
 }
+
+/* ── Mention autocomplete ─────────────────────────────────────────────────── */
+.mention-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  width: 220px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 200;
+  background: var(--surface-1);
+  border: 2px outset var(--border-light);
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.35);
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 5px 9px;
+  font-size: 11px;
+  background: var(--surface-1);
+  border: none;
+  border-bottom: 1px solid var(--border-dark);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mention-item:last-child { border-bottom: none; }
+.mention-item:hover, .mention-item.active { background: var(--win98-highlight); color: var(--win98-highlight-text); }
+
+.mention-avatar { font-size: 14px; }
+.mention-username { font-weight: bold; }

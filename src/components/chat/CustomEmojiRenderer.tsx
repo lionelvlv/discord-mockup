@@ -27,11 +27,11 @@ export function useCustomEmojis() {
 
 const URL_RE = /(https?:\/\/[^\s<>'")\]]+)/g;
 
-// Render text that may contain :custom_emoji: tokens AND clickable URLs
+// Render text with custom emoji tokens, clickable URLs, and @mention highlights
 export const RenderWithCustomEmojis: React.FC<{ text: string; customEmojis: CustomEmoji[] }> = ({ text, customEmojis }) => {
   const emojiMap = new Map(customEmojis.map(e => [`:${e.name}:`, e]));
-  // Split on both custom emoji tokens and URLs
-  const parts = text.split(/(:[a-z0-9_]+:|https?:\/\/[^\s<>'")\]]+)/g);
+  // Split on custom emoji tokens, URLs, and @mentions
+  const parts = text.split(/(:[a-z0-9_]+:|https?:\/\/[^\s<>'")\]]+|@[a-zA-Z0-9_]+)/g);
 
   return (
     <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -42,6 +42,9 @@ export const RenderWithCustomEmojis: React.FC<{ text: string; customEmojis: Cust
         }
         if (/^https?:\/\//.test(part)) {
           return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="msg-link">{part}</a>;
+        }
+        if (/^@[a-zA-Z0-9_]+$/.test(part)) {
+          return <span key={i} className="msg-mention">{part}</span>;
         }
         return <React.Fragment key={i}>{part}</React.Fragment>;
       })}

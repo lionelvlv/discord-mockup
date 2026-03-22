@@ -124,3 +124,13 @@ a {
   margin: 0 1px;
   image-rendering: auto;
 }
+
+/* @mention highlight in messages */
+.msg-mention {
+  color: var(--accent-primary);
+  background: rgba(88, 101, 242, 0.15);
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: bold;
+  cursor: default;
+}

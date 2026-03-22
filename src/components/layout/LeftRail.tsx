@@ -5,6 +5,7 @@ import ChannelList from '../lists/ChannelList';
 import VoiceChannelList from '../lists/VoiceChannelList';
 import DMList from '../lists/DMList';
 import ServerSettings from './ServerSettings';
+import ChannelSearch from './ChannelSearch';
 import './LeftRail.css';
 
 interface LeftRailProps {
@@ -14,7 +15,6 @@ interface LeftRailProps {
 const LeftRail: React.FC<LeftRailProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [serverName, setServerName] = useState('RETROCHORD');
-  const [search, setSearch]         = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ const LeftRail: React.FC<LeftRailProps> = ({ onNavigate }) => {
   return (
     <>
       <div className="left-rail panel">
-        {/* Server header with name + admin cog */}
+        {/* Server header */}
         <div className="server-header panel-outset">
           <span className="pixel-font server-name">{serverName.toUpperCase()}</span>
           {user?.isAdmin && (
@@ -40,29 +40,17 @@ const LeftRail: React.FC<LeftRailProps> = ({ onNavigate }) => {
           )}
         </div>
 
-        {/* Channel/DM search */}
-        <div className="left-rail-search">
-          <input
-            className="left-rail-search-input"
-            type="text"
-            placeholder="🔍 Search channels…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            aria-label="Search channels and DMs"
-          />
-          {search && (
-            <button className="left-rail-search-clear" onClick={() => setSearch('')} aria-label="Clear search">✕</button>
-          )}
-        </div>
+        {/* Full-text message search */}
+        <ChannelSearch onNavigate={onNavigate} />
 
         <div className="rail-content">
-          <ChannelList onNavigate={onNavigate} search={search} />
-          <VoiceChannelList onNavigate={onNavigate} search={search} />
-          <DMList onNavigate={onNavigate} search={search} />
+          {/* Lists are no longer filtered by search — search is handled by ChannelSearch above */}
+          <ChannelList onNavigate={onNavigate} />
+          <VoiceChannelList onNavigate={onNavigate} />
+          <DMList onNavigate={onNavigate} />
         </div>
       </div>
 
-      {/* Server settings modal — admin only */}
       {showSettings && user?.isAdmin && (
         <ServerSettings onClose={() => setShowSettings(false)} />
       )}

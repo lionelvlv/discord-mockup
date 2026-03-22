@@ -9,19 +9,18 @@ import './MessageList.css';
 
 interface MessageListProps {
   messages: Message[];
+  highlightMessageId?: string;
+  onHighlightClear?: () => void;
 }
 
-// Subscribe to ALL users once at the list level and pass sender data down to
-// each MessageItem as a prop. This replaces the old pattern where every
-// MessageItem opened its own Firestore listener — which created N×senders
-// redundant subscriptions (visible in logs as 20+ "Subscribing to sender" lines
-// for only 3 unique users).
-function MessageList({ messages }: MessageListProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+function MessageList({ messages, highlightMessageId, onHighlightClear }: MessageListProps) {
+  const messagesEndRef   = useRef<HTMLDivElement>(null);
+  const messageRefs      = useRef<Map<string, HTMLDivElement>>(new Map());
   const prevMessageCount = useRef(messages.length);
-  const [usersById, setUsersById] = useState<Map<string, User>>(new Map());
+  const [usersById, setUsersById]       = useState<Map<string, User>>(new Map());
+  const [flashId, setFlashId]           = useState<string | undefined>(undefined);
+  const didScrollToHighlight            = useRef(false);
 
-  // Single subscription for all user docs — updates whenever any profile changes
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
       const map = new Map<string, User>();
@@ -31,7 +30,9 @@ function MessageList({ messages }: MessageListProps) {
     return () => unsub();
   }, []);
 
+  // Scroll to bottom on new messages (unless we have a highlight target)
   useEffect(() => {
+    if (highlightMessageId) return; // let the highlight scroll handle it
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -39,13 +40,31 @@ function MessageList({ messages }: MessageListProps) {
       soundManager.play('message', 0.5);
     }
     prevMessageCount.current = messages.length;
-  }, [messages]);
+  }, [messages, highlightMessageId]);
+
+  // Scroll to highlighted message once messages are loaded
+  useEffect(() => {
+    if (!highlightMessageId || didScrollToHighlight.current) return;
+    const el = messageRefs.current.get(highlightMessageId);
+    if (!el) return;
+    didScrollToHighlight.current = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setFlashId(highlightMessageId);
+    // Remove flash class after animation, then clear the URL param
+    setTimeout(() => {
+      setFlashId(undefined);
+      onHighlightClear?.();
+    }, 3000);
+  }, [messages, highlightMessageId, onHighlightClear]);
+
+  // Reset scroll flag when highlight changes
+  useEffect(() => {
+    didScrollToHighlight.current = false;
+  }, [highlightMessageId]);
 
   return (
     <div className="message-list">
       {messages.map((message) => {
-        // Look up sender; if not in the map (e.g. hard-deleted account), pass a
-        // placeholder so the message still renders rather than staying blank forever.
         const sender = usersById.get(message.senderId) ?? {
           id: message.senderId,
           username: 'Deleted User',
@@ -57,11 +76,16 @@ function MessageList({ messages }: MessageListProps) {
           isDeleted: true,
         };
         return (
-          <MessageItem
+          <div
             key={message.id}
-            message={message}
-            sender={sender}
-          />
+            ref={el => {
+              if (el) messageRefs.current.set(message.id, el);
+              else messageRefs.current.delete(message.id);
+            }}
+            className={flashId === message.id ? 'message-highlight-flash' : ''}
+          >
+            <MessageItem message={message} sender={sender} />
+          </div>
         );
       })}
       <div ref={messagesEndRef} />

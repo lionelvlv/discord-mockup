@@ -22,4 +22,6 @@ export interface Message {
   deleted: boolean;
   reactions: Reaction[];
   attachments?: Attachment[];
+  editedAt?: number;        // set when message is edited
+  mentions?: string[];      // userIds mentioned with @username
 }
