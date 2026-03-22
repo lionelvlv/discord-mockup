@@ -158,10 +158,11 @@
 
 /* Expanded — full call panel at bottom of main section */
 .voice-call-overlay.expanded {
-  height: 340px;
+  height: 420px;
   border-top: 2px solid var(--border-darker);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* Collapsed — thin status bar */
@@ -254,5 +255,57 @@
 }
 
 @media (max-width: 768px) {
-  .voice-call-overlay.expanded { height: 260px; }
+  /* Desktop expanded overlay is not useful on mobile — hide it. The call tab
+     renders a full-screen VoicePanel via .mobile-call-section instead. */
+  .voice-call-overlay.expanded { display: none !important; }
+
+  /* The VoicePanel inside the desktop overlay must not run on mobile.
+     It stays mounted (WebRTC alive) but takes zero space and has no media access. */
+  .desktop-voice-panel {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+
+  /* Collapsed bar still shows as a call-in-progress indicator */
+  .voice-call-overlay.collapsed {
+    display: flex;
+    height: 44px;
+  }
+
+  /* Mobile call tab — full screen */
+  .mobile-call-section {
+    display: flex;
+    grid-column: 1;
+    grid-row: 1;
+    height: 100%;
+    width: 100%;
+    background: var(--surface-1);
+  }
+
+  /* Hide call section when not on call tab */
+  .app-layout:not([data-mobile-tab="call"]) .mobile-call-section {
+    display: none;
+  }
+
+  /* When on call tab, hide all other sections */
+  .app-layout[data-mobile-tab="call"] .main-section { display: none; }
+  .app-layout[data-mobile-tab="call"] .left-section  { display: none; }
+  .app-layout[data-mobile-tab="call"] .right-section { display: none; }
+
+  /* Call tab button styling */
+  .mobile-nav-btn.call-active {
+    color: var(--status-online);
+    border-top: 2px solid var(--status-online);
+    background: var(--surface-2);
+  }
+  .mobile-nav-btn.call-speaking {
+    animation: mobile-call-pulse 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes mobile-call-pulse {
+    from { color: var(--status-online); }
+    to   { color: #7ddc9a; }
+  }
 }

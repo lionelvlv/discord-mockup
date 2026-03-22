@@ -5,7 +5,12 @@ import { db } from '../../../config/firebase';
 import { Channel } from '../../../types/channel';
 import { useVoice } from '../../../features/voice/VoiceContext';
 
-const VoiceChannelPage: React.FC = () => {
+interface Props {
+  // Called after joining so AppLayout can switch to the call tab on mobile
+  onJoin?: () => void;
+}
+
+const VoiceChannelPage: React.FC<Props> = ({ onJoin }) => {
   const { channelId } = useParams<{ channelId: string }>();
   const navigate = useNavigate();
   const { activeVoice, joinVoice } = useVoice();
@@ -13,9 +18,7 @@ const VoiceChannelPage: React.FC = () => {
   useEffect(() => {
     if (!channelId) return;
 
-    // Already in this exact call — navigate forward to general, not back.
-    // navigate(-1) caused a loop: going back could land on the voice URL again,
-    // re-triggering this effect, re-joining, and resetting the call.
+    // Already in this exact call — just go back to chat view
     if (activeVoice?.channelId === channelId) {
       navigate('/app/channel/general', { replace: true });
       return;
@@ -45,6 +48,7 @@ const VoiceChannelPage: React.FC = () => {
       }
 
       joinVoice(channel.id, channel.name);
+      onJoin?.(); // switch to call tab on mobile
       navigate('/app/channel/general', { replace: true });
     };
 

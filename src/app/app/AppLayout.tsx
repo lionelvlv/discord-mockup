@@ -12,9 +12,8 @@ import DMPage from './dm/DMPage';
 import ProfileSettings from './settings/ProfileSettings';
 import './App.css';
 
-type MobileTab = 'channels' | 'chat' | 'members';
+type MobileTab = 'channels' | 'chat' | 'members' | 'call';
 
-// Inner layout has access to VoiceContext
 const AppInner: React.FC = () => {
   const { user } = useAuth();
   const { activeVoice, leaveVoice, isExpanded, setExpanded, localIsSpeaking } = useVoice();
@@ -23,6 +22,9 @@ const AppInner: React.FC = () => {
   if (!user) return <Navigate to="/login" />;
 
   const handleNavigate = () => setMobileTab('chat');
+
+  // When joining a call on mobile, switch to the call tab automatically
+  const handleJoinVoice = () => setMobileTab('call');
 
   return (
     <div className="app-layout" data-mobile-tab={mobileTab}>
@@ -35,20 +37,17 @@ const AppInner: React.FC = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/app/channel/general" />} />
           <Route path="/channel/:channelId" element={<ChannelPage />} />
-          <Route path="/voice/:channelId" element={<VoiceChannelPage />} />
+          <Route path="/voice/:channelId" element={<VoiceChannelPage onJoin={handleJoinVoice} />} />
           <Route path="/dm/:userId" element={<DMPage />} />
           <Route path="/settings/profile" element={<ProfileSettings />} />
         </Routes>
 
-        {/* Persistent voice call panel — renders outside Routes so navigation
-            doesn't unmount it. Collapsed to a status bar when minimised.
-            CRITICAL: VoicePanel must ALWAYS be mounted while activeVoice is set.
-            Never conditionally render VoicePanel inside isExpanded — that would
-            unmount it when collapsing, triggering the cleanup effect and leaving
-            the voice channel. Use CSS display:none to hide the expanded view. */}
+        {/* Desktop: persistent overlay at bottom of main section.
+            On mobile this whole overlay is hidden by CSS — the mobile-call-section
+            below renders a single VoicePanel for mobile. */}
         {activeVoice && (
           <div className={`voice-call-overlay ${isExpanded ? 'expanded' : 'collapsed'}`}>
-            {/* Expanded header — only visible when expanded */}
+            {/* Title bar — only visible when expanded */}
             <div className="voice-call-expanded panel" style={{ display: isExpanded ? 'flex' : 'none' }}>
               <div className="voice-call-expanded-header panel-outset">
                 <span className="pixel-font" style={{ fontSize: '8px' }}>
@@ -60,15 +59,11 @@ const AppInner: React.FC = () => {
                   title="Minimise"
                 >─</button>
               </div>
-              <div className="voice-call-expanded-body">
-                {/* VoicePanel is ALWAYS rendered here — never conditionally.
-                    Unmounting it would trigger cleanup and leave the channel. */}
-              </div>
             </div>
 
-            {/* VoicePanel always mounted — positioned absolutely when collapsed
-                so it stays in the DOM but takes no visible space */}
-            <div className={isExpanded ? 'voice-panel-mount-expanded' : 'voice-panel-mount-collapsed'}>
+            {/* Desktop VoicePanel — always mounted, zero-size when collapsed.
+                Hidden on mobile via CSS so only one VoicePanel instance runs. */}
+            <div className={`${isExpanded ? 'voice-panel-mount-expanded' : 'voice-panel-mount-collapsed'} desktop-voice-panel`}>
               <VoicePanel
                 channelId={activeVoice.channelId}
                 channelName={activeVoice.channelName}
@@ -76,11 +71,11 @@ const AppInner: React.FC = () => {
               />
             </div>
 
-            {/* Collapsed status bar — only visible when collapsed */}
+            {/* Collapsed status bar — tapping on mobile switches to call tab */}
             <div
               className="voice-call-bar panel-outset"
               style={{ display: isExpanded ? 'none' : 'flex' }}
-              onClick={() => setExpanded(true)}
+              onClick={() => { setExpanded(true); setMobileTab('call'); }}
             >
               <span className={`voice-call-bar-icon ${localIsSpeaking ? 'speaking-pulse' : ''}`}>🔊</span>
               <span className="voice-call-bar-name">{activeVoice.channelName}</span>
@@ -97,10 +92,24 @@ const AppInner: React.FC = () => {
         )}
       </div>
 
+      {/* Mobile: full-screen call view — shown when call tab is active */}
+      {activeVoice && (
+        <div className="mobile-call-section">
+          {/* On mobile the VoicePanel is rendered here in its own full section.
+              On desktop this section is hidden (display:none) and the overlay above is used. */}
+          <VoicePanel
+            channelId={activeVoice.channelId}
+            channelName={activeVoice.channelName}
+            onLeave={() => { leaveVoice(); setMobileTab('chat'); }}
+          />
+        </div>
+      )}
+
       <div className="right-section">
         <RightRail />
       </div>
 
+      {/* Mobile bottom nav */}
       <nav className="mobile-nav" aria-label="App navigation">
         <button
           className={`mobile-nav-btn ${mobileTab === 'channels' ? 'active' : ''}`}
@@ -118,6 +127,17 @@ const AppInner: React.FC = () => {
           <span>🏠</span>
           <span className="mobile-nav-label">Chat</span>
         </button>
+        {/* Call tab — only shown when in a voice call */}
+        {activeVoice && (
+          <button
+            className={`mobile-nav-btn ${mobileTab === 'call' ? 'active' : ''} call-active ${localIsSpeaking ? 'call-speaking' : ''}`}
+            onClick={() => setMobileTab('call')}
+            aria-label="Voice call"
+          >
+            <span>📞</span>
+            <span className="mobile-nav-label">Call</span>
+          </button>
+        )}
         <button
           className={`mobile-nav-btn ${mobileTab === 'members' ? 'active' : ''}`}
           onClick={() => setMobileTab('members')}
