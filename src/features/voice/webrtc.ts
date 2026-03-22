@@ -111,20 +111,32 @@ export class WebRTCManager {
   async startScreenShare(): Promise<void> {
     this.screenStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
-      audio: false
+      audio: true  // Captures system/tab audio when the browser & OS support it
     });
-    const track = this.screenStream.getVideoTracks()[0];
+    const screenTracks = this.screenStream.getTracks(); // video + optional audio
 
     this.peerConnections.forEach((pc) => {
-      const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
-      if (sender) {
-        sender.replaceTrack(track); // prefer replaceTrack to avoid renegotiation
-      } else {
-        pc.addTrack(track, this.screenStream!);
-      }
+      screenTracks.forEach((track) => {
+        if (track.kind === 'video') {
+          // Replace existing video sender (avoids renegotiation if possible)
+          const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
+          if (sender) {
+            sender.replaceTrack(track);
+          } else {
+            pc.addTrack(track, this.screenStream!);
+          }
+        } else if (track.kind === 'audio') {
+          // Send screen audio as a second audio track (separate from mic)
+          const hasScreenAudio = pc.getSenders().some(
+            (s) => s.track && this.screenStream!.getAudioTracks().includes(s.track)
+          );
+          if (!hasScreenAudio) pc.addTrack(track, this.screenStream!);
+        }
+      });
     });
 
-    track.onended = () => this.stopScreenShare();
+    // When the user clicks "Stop sharing" in the browser UI, clean up
+    this.screenStream.getVideoTracks()[0].onended = () => this.stopScreenShare();
   }
 
   async stopScreenShare(): Promise<void> {

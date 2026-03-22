@@ -87,9 +87,9 @@ const DMPage: React.FC = () => {
     };
   }, [userId, currentUser?.id]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, attachments?: import('../../../types/message').Attachment[]) => {
     if (currentUser && dmId) {
-      await sendMessage(currentUser.id, content, undefined, dmId);
+      await sendMessage(currentUser.id, content, undefined, dmId, attachments);
       await markDMSeen(dmId, currentUser.id);
     }
   };

@@ -114,9 +114,9 @@ const ChannelPage: React.FC = () => {
     };
   }, [resolvedId, user?.id]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, attachments?: import('../../../types/message').Attachment[]) => {
     if (user && channel) {
-      await sendMessage(user.id, content, channel.id);
+      await sendMessage(user.id, content, channel.id, undefined, attachments);
     }
   };
 

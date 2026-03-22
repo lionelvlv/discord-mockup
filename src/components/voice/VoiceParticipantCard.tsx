@@ -6,18 +6,108 @@ import './VoiceParticipantCard.css';
 
 interface Props { participant: VoiceParticipant; }
 
+// Web Audio API speaking detection — measures RMS of the audio signal every
+// animation frame. If the level exceeds SPEAK_THRESHOLD the participant is
+// marked as speaking; a short debounce prevents rapid flicker on silence.
+const SPEAK_THRESHOLD = 0.015;  // 0–1 normalised RMS (tune if too sensitive)
+const SILENCE_DEBOUNCE_MS = 400; // how long below threshold before "not speaking"
+
+function useSpeakingDetector(stream: MediaStream | undefined, enabled: boolean) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const rafRef = useRef<number>(0);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !stream || stream.getAudioTracks().length === 0) {
+      setIsSpeaking(false);
+      return;
+    }
+
+    // Lazily create an AudioContext — reuse if one already exists for this card
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new AudioContext();
+    }
+    const ctx = audioCtxRef.current;
+
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.4;
+    analyserRef.current = analyser;
+
+    const source = ctx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    sourceRef.current = source;
+
+    const buf = new Float32Array(analyser.fftSize);
+
+    const tick = () => {
+      analyser.getFloatTimeDomainData(buf);
+      // RMS (root mean square) of the signal
+      let sumSq = 0;
+      for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
+      const rms = Math.sqrt(sumSq / buf.length);
+
+      if (rms > SPEAK_THRESHOLD) {
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        setIsSpeaking(true);
+      } else if (silenceTimerRef.current === null) {
+        silenceTimerRef.current = setTimeout(() => {
+          setIsSpeaking(false);
+          silenceTimerRef.current = null;
+        }, SILENCE_DEBOUNCE_MS);
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    // AudioContext requires a user gesture to start on some browsers
+    ctx.resume().then(() => { rafRef.current = requestAnimationFrame(tick); });
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      source.disconnect();
+      analyser.disconnect();
+      setIsSpeaking(false);
+    };
+  }, [stream, enabled]);
+
+  // Tear down AudioContext on component unmount
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      sourceRef.current?.disconnect();
+      analyserRef.current?.disconnect();
+      audioCtxRef.current?.close().catch(() => {});
+    };
+  }, []);
+
+  return isSpeaking;
+}
+
 function VoiceParticipantCard({ participant }: Props) {
   const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isOwn = user?.id === participant.userId;
 
-  // Track version counter so we can force re-attach when tracks change.
-  // The stream object reference often stays the same even when tracks are added/removed.
   const [trackVersion, setTrackVersion] = useState(0);
 
-  // Attach/re-attach media elements whenever the stream or tracks change.
-  // Also subscribe to track events on the stream to catch mid-call camera toggles.
+  // Detect speaking — for own card use local stream directly;
+  // for remote cards use the received stream.
+  // Muted participants are never "speaking".
+  const isSpeaking = useSpeakingDetector(
+    participant.stream,
+    !participant.isMuted
+  );
+
   useEffect(() => {
     const stream = participant.stream;
     if (!stream) return;
@@ -26,15 +116,13 @@ function VoiceParticipantCard({ participant }: Props) {
 
     if (audioRef.current && !isOwn) {
       audioRef.current.srcObject = stream;
-      audioRef.current.play().catch(() => {/* autoplay policy — unlocked on user gesture */});
+      audioRef.current.play().catch(() => {});
     }
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch(() => {});
     }
 
-    // Force a re-render (and srcObject re-attach) whenever a track is added or removed
-    // mid-call (e.g. remote user toggles camera on/off).
     const onTrackChange = () => {
       console.log(`[VoiceCard] Track change on stream for ${participant.username}`);
       setTrackVersion((v) => v + 1);
@@ -54,9 +142,7 @@ function VoiceParticipantCard({ participant }: Props) {
     participant.stream.getVideoTracks().some((t) => t.readyState === 'live' && t.enabled);
 
   return (
-    <div className="voice-participant-card panel">
-      {/* Always render both elements — toggle visibility with CSS so the ref
-          is never null when a stream first arrives. */}
+    <div className={`voice-participant-card panel ${isSpeaking ? 'speaking' : ''} ${participant.isMuted ? 'muted' : ''}`}>
       <video
         ref={videoRef}
         autoPlay
@@ -77,6 +163,9 @@ function VoiceParticipantCard({ participant }: Props) {
       <div className="participant-info">
         <div className="participant-name">
           {participant.username}{isOwn && ' (You)'}
+          {isSpeaking && !participant.isMuted && (
+            <span className="speaking-badge" title="Speaking">🔊</span>
+          )}
         </div>
         <div className="participant-status">
           {participant.isMuted && <span className="status-icon">🔇</span>}

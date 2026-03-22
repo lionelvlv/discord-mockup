@@ -20,7 +20,8 @@ export const sendMessage = async (
   senderId: string,
   content: string,
   channelId?: string,
-  dmId?: string
+  dmId?: string,
+  attachments?: import('../types/message').Attachment[]
 ): Promise<Message> => {
   const messageData = {
     senderId,
@@ -29,11 +30,12 @@ export const sendMessage = async (
     dmId: dmId || null,
     timestamp: Date.now(),
     deleted: false,
-    reactions: []
+    reactions: [],
+    attachments: attachments && attachments.length > 0 ? attachments : [],
   };
 
   const docRef = await addDoc(collection(db, 'messages'), messageData);
-  
+
   return {
     id: docRef.id,
     ...messageData

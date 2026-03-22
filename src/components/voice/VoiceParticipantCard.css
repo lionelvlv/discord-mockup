@@ -6,8 +6,30 @@
   background: var(--surface-2);
   border: 2px outset var(--border-light);
   min-height: 200px;
+  transition: box-shadow 0.1s ease, border-color 0.1s ease;
+  position: relative;
 }
 
+/* ── Speaking indicator — glowing green outline ────────────────────────── */
+.voice-participant-card.speaking {
+  border: 2px solid var(--status-online);
+  box-shadow:
+    0 0 0 2px var(--status-online),
+    0 0 8px 2px rgba(59, 165, 93, 0.5);
+  animation: speak-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes speak-pulse {
+  from { box-shadow: 0 0 0 2px var(--status-online), 0 0 6px 1px rgba(59, 165, 93, 0.4); }
+  to   { box-shadow: 0 0 0 2px var(--status-online), 0 0 14px 4px rgba(59, 165, 93, 0.7); }
+}
+
+/* ── Muted — subtle dim ─────────────────────────────────────────────────── */
+.voice-participant-card.muted {
+  opacity: 0.75;
+}
+
+/* ── Video / avatar area ─────────────────────────────────────────────────── */
 .participant-video {
   width: 100%;
   height: 150px;
@@ -28,6 +50,7 @@
   margin-bottom: 8px;
 }
 
+/* ── Info bar ───────────────────────────────────────────────────────────── */
 .participant-info {
   width: 100%;
   text-align: center;
@@ -40,6 +63,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.speaking-badge {
+  font-size: 11px;
+  animation: speak-pulse 0.6s ease-in-out infinite alternate;
 }
 
 .participant-status {
@@ -49,6 +81,9 @@
   font-size: 14px;
 }
 
-.status-icon {
-  opacity: 0.7;
+.status-icon { opacity: 0.7; }
+
+@media (max-width: 768px) {
+  .participant-video,
+  .participant-avatar { height: 110px; }
 }
