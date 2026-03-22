@@ -1,0 +1,46 @@
+.channel-header {
+  height: var(--header-height);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(to bottom, var(--surface-2), var(--surface-1));
+  border-bottom: 2px solid var(--border-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-title {
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.channel-hash {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.channel-description {
+  font-size: 9px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.join-voice-btn {
+  padding: 6px 12px;
+  font-size: 11px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

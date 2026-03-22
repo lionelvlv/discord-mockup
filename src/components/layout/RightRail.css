@@ -1,0 +1,33 @@
+.right-rail {
+  width: var(--right-rail-width);
+  height: 100%;
+  background: var(--surface-1);
+  border-left: 2px solid var(--border-darker);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.online-count-header {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, var(--surface-2), var(--surface-1));
+  border-bottom: 2px solid var(--border-dark);
+  flex-shrink: 0;
+}
+
+.online-count-header .pixel-font {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.online-badge {
+  background: var(--status-online);
+  color: var(--text-primary);
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: bold;
+  border: 1px solid var(--border-dark);
+}

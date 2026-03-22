@@ -1,0 +1,142 @@
+.channel-list {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.list-header {
+  padding: 8px 4px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.create-channel-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.create-channel-btn:hover {
+  background: var(--surface-2);
+}
+
+.channel-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 6px 8px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.channel-item.selected {
+  background: var(--win98-highlight);
+  color: var(--win98-highlight-text);
+}
+
+.channel-hash {
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
+.channel-item.selected .channel-hash {
+  color: var(--win98-highlight-text);
+}
+
+.channel-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context-menu {
+  position: fixed;
+  background: var(--surface-1);
+  border: 2px outset var(--border-light);
+  box-shadow: var(--shadow-md);
+  z-index: 1000;
+  min-width: 150px;
+}
+
+.context-item {
+  padding: 8px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.context-item:last-child {
+  border-bottom: none;
+}
+
+.context-item:hover {
+  background: var(--win98-highlight);
+  color: var(--win98-highlight-text);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal {
+  background: var(--surface-1);
+  border: 2px outset var(--border-light);
+  width: 400px;
+  max-width: 90%;
+}
+
+.modal-header {
+  background: var(--win98-highlight);
+  color: var(--win98-highlight-text);
+  padding: 8px 12px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-body label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 11px;
+}
+
+.modal-body input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.modal-footer {
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  border-top: 2px solid var(--border-dark);
+}

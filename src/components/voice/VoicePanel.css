@@ -1,0 +1,38 @@
+.voice-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface-1);
+}
+
+.voice-header {
+  padding: 12px;
+  border-bottom: 2px solid var(--border-dark);
+  background: linear-gradient(to bottom, var(--surface-2), var(--surface-1));
+}
+
+.voice-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.voice-title .pixel-font {
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.participant-count {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.voice-participants {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  align-content: start;
+}

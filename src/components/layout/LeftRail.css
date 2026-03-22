@@ -1,0 +1,28 @@
+.left-rail {
+  width: var(--left-rail-width);
+  height: calc(100vh - var(--user-panel-height));
+  background: var(--surface-1);
+  border-right: 2px solid var(--border-darker);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.server-header {
+  padding: 12px;
+  text-align: center;
+  background: linear-gradient(to bottom, var(--surface-2), var(--surface-1));
+  border-bottom: 2px solid var(--border-dark);
+  flex-shrink: 0;
+}
+
+.server-name {
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.rail-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}

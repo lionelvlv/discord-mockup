@@ -1,0 +1,44 @@
+.voice-controls {
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  border-top: 2px solid var(--border-dark);
+  background: var(--surface-2);
+}
+
+.control-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.control-btn.active {
+  background: var(--status-online);
+  border-color: var(--status-online);
+}
+
+.control-btn:hover {
+  transform: translateY(-1px);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+}
+
+.leave-btn {
+  background: #dc3545;
+  border-color: #dc3545;
+  margin-left: 12px;
+}
+
+.leave-btn:hover {
+  background: #c82333;
+}

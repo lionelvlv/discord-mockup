@@ -1,0 +1,36 @@
+.app-layout {
+  display: grid;
+  grid-template-columns: var(--left-rail-width) 1fr var(--right-rail-width);
+  grid-template-rows: 1fr var(--user-panel-height);
+  height: 100vh;
+  width: 100vw;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.left-section {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid var(--border-darker);
+}
+
+.left-section > :first-child {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.main-section {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-section {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  overflow: hidden;
+}

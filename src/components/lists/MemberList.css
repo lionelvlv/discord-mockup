@@ -1,0 +1,64 @@
+.member-list {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.member-header {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, var(--surface-2), var(--surface-1));
+  border-bottom: 2px solid var(--border-dark);
+}
+
+.member-header span:first-child {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.member-count {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.member-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  margin-bottom: 2px;
+  padding: 6px 8px;
+  border-radius: 0;
+}
+
+.member-item.current-user {
+  background: var(--surface-3);
+  cursor: default;
+}
+
+.member-item.current-user:hover {
+  background: var(--surface-3);
+}
+
+.member-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-crown-small {
+  font-size: 10px;
+  flex-shrink: 0;
+}

@@ -1,0 +1,162 @@
+.login-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: var(--bg-desktop);
+  overflow: hidden;
+}
+
+.login-bg {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+  pointer-events: none;
+}
+
+.login-container {
+  width: 480px;
+  z-index: 1;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.login-content {
+  padding: 24px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--border-dark);
+}
+
+.logo {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.login-header h1 {
+  font-size: 16px;
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+  color: var(--navy-dark);
+}
+
+.tagline {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.login-form {
+  margin-bottom: 16px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.form-group input {
+  width: 100%;
+}
+
+.error-box {
+  padding: 8px;
+  margin-bottom: 12px;
+  background: #ffe0e0;
+  color: #c00;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.login-button {
+  width: 100%;
+  padding: 8px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.login-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  font-size: 10px;
+}
+
+.link-95 {
+  color: var(--navy-dark);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-95:hover {
+  color: var(--blue-bright);
+}
+
+.separator {
+  color: var(--text-muted);
+}
+
+.demo-accounts {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fffef0;
+  border-radius: 0;
+}
+
+.demo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10px;
+}
+
+.demo-item {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.demo-item strong {
+  color: var(--navy-dark);
+}
