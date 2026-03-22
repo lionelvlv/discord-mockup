@@ -23,8 +23,9 @@ async function uploadAvatarToCloudinary(file: File): Promise<string> {
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
   formData.append('tags', 'retrochord_avatar');
-  // Tell Cloudinary to crop to a square so avatars always look good
-  formData.append('transformation', 'c_fill,w_200,h_200,g_face');
+  // Note: transformation not allowed with unsigned presets.
+  // Configure face-crop in the upload preset on the Cloudinary dashboard instead:
+  // Settings → Upload → Upload presets → Edit preset → Incoming Transformation
 
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
     method: 'POST',
