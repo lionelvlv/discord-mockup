@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../features/auth/useAuth';
 import { deleteMessage, toggleReaction } from '../../features/chat/api';
 import { Message, Attachment } from '../../types/message';
@@ -6,42 +6,19 @@ import { User } from '../../types/user';
 import { formatTime } from '../../lib/time';
 import { REACTION_EMOJIS } from '../../lib/constants';
 import { detectEmbeds, EmbedInfo } from '../../lib/mediaUpload';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../config/firebase';
 import Avatar from '../ui/Avatar';
 import './MessageItem.css';
 
 interface MessageItemProps {
   message: Message;
+  // Always provided by MessageList from its shared user subscription.
+  sender: User;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
+const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }) => {
   const { user: currentUser } = useAuth();
-  const [sender, setSender] = useState<User | null>(null);
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
-
-  useEffect(() => {
-    if (!message.senderId) return;
-    console.log(`[MessageItem] Subscribing to sender ${message.senderId}`);
-    const unsub = onSnapshot(doc(db, 'users', message.senderId), (snap) => {
-      if (snap.exists()) {
-        setSender({ id: snap.id, ...snap.data() } as User);
-      } else {
-        setSender({
-          id: message.senderId,
-          username: 'Deleted User',
-          avatarUrl: '💀',
-          email: '',
-          bio: '',
-          presence: 'offline',
-          isAdmin: false,
-          isDeleted: true,
-        } as User);
-      }
-    });
-    return () => unsub();
-  }, [message.senderId]);
 
   const handleDelete = () => {
     if (currentUser && confirm('Delete this message?')) {
@@ -64,13 +41,14 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     );
   }
 
-  if (!sender) return null;
-
   const isOwnMessage = currentUser?.id === message.senderId;
   const canDelete = isOwnMessage || currentUser?.isAdmin;
-
-  // Detect embeds from message text
   const embeds = detectEmbeds(message.content);
+
+  // Resolve display sender — show placeholder for deleted accounts
+  const sender = senderProp.isDeleted
+    ? { ...senderProp, username: 'Deleted User', avatarUrl: '💀' }
+    : senderProp;
 
   return (
     <div
@@ -251,7 +229,9 @@ const EmbedRenderer: React.FC<{ embed: EmbedInfo }> = ({ embed }) => {
     );
   }
 
-  // YouTube / Vimeo — use sandboxed iframe, no allow-same-origin
+  // YouTube / Vimeo — these are explicitly trusted domains so no sandbox needed.
+  // sandbox without allow-same-origin breaks YouTube's player (cache storage access).
+  // allowFullScreen is a separate iframe attribute, not a sandbox token.
   return (
     <div className="embed-video-wrap">
       <iframe
@@ -259,12 +239,9 @@ const EmbedRenderer: React.FC<{ embed: EmbedInfo }> = ({ embed }) => {
         className="embed-video"
         title={embed.kind === 'youtube' ? 'YouTube video' : 'Vimeo video'}
         frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         loading="lazy"
-        // sandbox without allow-same-origin prevents the iframe from accessing
-        // parent page cookies, localStorage, or running scripts in our origin
-        sandbox="allow-scripts allow-presentation allow-fullscreen"
         referrerPolicy="no-referrer"
       />
       <a
