@@ -163,3 +163,62 @@
 @media (max-width: 520px) {
   .avatar-preview-row { flex-direction: column; align-items: center; }
 }
+
+/* ── Custom emoji upload ─────────────────────────────────────────────────── */
+.emoji-upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.emoji-name-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.my-emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.my-emoji-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px;
+  background: var(--surface-2);
+  border: 2px inset var(--border-dark);
+  width: 72px;
+}
+
+.my-emoji-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.my-emoji-name {
+  font-size: 8px;
+  color: var(--text-muted);
+  text-align: center;
+  word-break: break-all;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-emoji-del {
+  font-size: 11px;
+  padding: 2px 4px;
+  width: 100%;
+}
+
+@media (max-width: 520px) {
+  .emoji-upload-row { flex-direction: column; align-items: stretch; }
+}

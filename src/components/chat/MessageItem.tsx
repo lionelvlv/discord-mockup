@@ -6,6 +6,7 @@ import { User } from '../../types/user';
 import { formatTime } from '../../lib/time';
 import { REACTION_EMOJIS } from '../../lib/constants';
 import { detectEmbeds, EmbedInfo, renderTextWithLinks } from '../../lib/mediaUpload';
+import { useCustomEmojis, RenderWithCustomEmojis } from './CustomEmojiRenderer';
 import Avatar from '../ui/Avatar';
 import './MessageItem.css';
 
@@ -17,6 +18,7 @@ interface MessageItemProps {
 
 const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }) => {
   const { user: currentUser } = useAuth();
+  const customEmojis = useCustomEmojis();
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
 
@@ -69,11 +71,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
 
         {message.content && (
           <div className="message-bubble panel-outset">
-            {renderTextWithLinks(message.content).map((part, i) =>
-              typeof part === 'string'
-                ? part
-                : <a key={part.key} href={part.url} target="_blank" rel="noopener noreferrer" className="msg-link">{part.url}</a>
-            )}
+            <RenderWithCustomEmojis text={message.content} customEmojis={customEmojis} />
           </div>
         )}
 

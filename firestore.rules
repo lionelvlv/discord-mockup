@@ -55,6 +55,22 @@ service cloud.firestore {
     match /typing/{typingId} {
       allow read, write: if request.auth != null;
     }
+
+    // Custom emojis — anyone can read, uploader can create/delete, admin can delete any
+    match /customEmojis/{emojiId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.uploadedBy == request.auth.uid;
+      allow delete: if request.auth != null
+                    && (resource.data.uploadedBy == request.auth.uid || isAdmin());
+      allow update: if false;
+    }
+
+    // Server settings — anyone can read, only admins can write
+    match /serverSettings/{doc} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
   }
 }
 

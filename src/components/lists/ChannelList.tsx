@@ -9,9 +9,10 @@ import './ChannelList.css';
 
 interface ChannelListProps {
   onNavigate?: () => void;
+  search?: string;
 }
 
-const ChannelList: React.FC<ChannelListProps> = ({ onNavigate }) => {
+const ChannelList: React.FC<ChannelListProps> = ({ onNavigate, search = '' }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -135,7 +136,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ onNavigate }) => {
         {channels.length === 0 && (
           <div style={{ padding: '8px', fontSize: '10px', color: '#666' }}>No channels found</div>
         )}
-        {channels.map((channel) => (
+        {channels.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map((channel) => (
           <div
             key={channel.id}
             className={`channel-item list-item-95 ${isChannelActive(channel.id) ? 'selected' : ''}`}

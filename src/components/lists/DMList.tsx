@@ -12,9 +12,10 @@ import './DMList.css';
 
 interface DMListProps {
   onNavigate?: () => void;
+  search?: string;
 }
 
-const DMList: React.FC<DMListProps> = ({ onNavigate }) => {
+const DMList: React.FC<DMListProps> = ({ onNavigate, search = '' }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -102,7 +103,12 @@ const DMList: React.FC<DMListProps> = ({ onNavigate }) => {
     <>
       <div className="dm-list">
         <div className="list-header pixel-font">DIRECT MESSAGES</div>
-        {dms.map((dm) => {
+        {dms.filter(dm => {
+          if (!search) return true;
+          const otherId = dm.userA === user?.id ? dm.userB : dm.userA;
+          const otherUser = users.get(otherId);
+          return otherUser?.username?.toLowerCase().includes(search.toLowerCase());
+        }).map((dm) => {
           const otherUser = getOtherUser(dm);
           if (!otherUser) return null;
           const isDeleted = otherUser.isDeleted;

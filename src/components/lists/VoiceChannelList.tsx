@@ -11,9 +11,10 @@ import './VoiceChannelList.css';
 
 interface VoiceChannelListProps {
   onNavigate?: () => void;
+  search?: string;
 }
 
-const VoiceChannelList: React.FC<VoiceChannelListProps> = ({ onNavigate }) => {
+const VoiceChannelList: React.FC<VoiceChannelListProps> = ({ onNavigate, search = '' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
@@ -173,7 +174,7 @@ const VoiceChannelList: React.FC<VoiceChannelListProps> = ({ onNavigate }) => {
             +
           </button>
         </div>
-        {voiceChannels.map((channel) => {
+        {voiceChannels.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map((channel) => {
           const participants = participantsByChannel[channel.id] || [];
           const participantCount = participants.length;
           const isExpanded = expandedChannels.has(channel.id);

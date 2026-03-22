@@ -8,6 +8,7 @@ import {
 } from '../../lib/mediaUpload';
 import { Attachment } from '../../types/message';
 import GifPicker from './GifPicker';
+import EmojiPicker from './EmojiPicker';
 import './MessageComposer.css';
 
 interface PendingFile {
@@ -32,6 +33,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -138,6 +140,11 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
     setShowGifPicker(false);
   };
 
+  const handleEmojiSelect = (emoji: string, isCustom?: boolean, customUrl?: string) => {
+    setMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -183,6 +190,12 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
         <GifPicker
           onSelect={handleGifSelect}
           onClose={() => setShowGifPicker(false)}
+        />
+      )}
+      {showEmojiPicker && (
+        <EmojiPicker
+          onSelect={handleEmojiSelect}
+          onClose={() => setShowEmojiPicker(false)}
         />
       )}
       {/* File previews */}
@@ -232,8 +245,17 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
 
         <button
           type="button"
+          className={`attach-button button-95 ${showEmojiPicker ? 'active' : ''}`}
+          onClick={() => { setShowEmojiPicker(v => !v); setShowGifPicker(false); }}
+          title="Emoji"
+        >
+          😊
+        </button>
+
+        <button
+          type="button"
           className={`attach-button button-95 ${showGifPicker ? 'active' : ''}`}
-          onClick={() => setShowGifPicker(v => !v)}
+          onClick={() => { setShowGifPicker(v => !v); setShowEmojiPicker(false); }}
           title="Send a GIF"
         >
           GIF

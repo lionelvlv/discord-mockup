@@ -1,8 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/useAuth';
 import { PRESET_AVATARS } from '../../../lib/constants';
 import Avatar from '../../../components/ui/Avatar';
+import {
+  addCustomEmoji, deleteCustomEmoji, subscribeToCustomEmojis,
+  CustomEmoji, MAX_CUSTOM_EMOJIS_PER_USER
+} from '../../../features/customEmojis/api';
 import './settings.css';
 
 const CLOUD_NAME   = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
@@ -42,7 +46,8 @@ async function uploadAvatarToCloudinary(file: File): Promise<string> {
 const ProfileSettings: React.FC = () => {
   const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const emojiInputRef   = useRef<HTMLInputElement>(null);
 
   const [username, setUsername]         = useState(user?.username || '');
   const [bio, setBio]                   = useState(user?.bio || '');
@@ -51,9 +56,20 @@ const ProfileSettings: React.FC = () => {
   const [uploadError, setUploadError]   = useState<string | null>(null);
   const [saved, setSaved]               = useState(false);
   const [saving, setSaving]             = useState(false);
-
-  // Preview an image file before uploading
   const [localPreview, setLocalPreview] = useState<string | null>(null);
+
+  // ── Custom emoji state ──────────────────────────────────────────────────
+  const [myEmojis, setMyEmojis]         = useState<CustomEmoji[]>([]);
+  const [emojiName, setEmojiName]       = useState('');
+  const [emojiUploading, setEmojiUploading] = useState(false);
+  const [emojiError, setEmojiError]     = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToCustomEmojis(all =>
+      setMyEmojis(all.filter(e => e.uploadedBy === user.id))
+    );
+  }, [user?.id]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,6 +113,22 @@ const ProfileSettings: React.FC = () => {
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEmojiFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    e.target.value = '';
+    setEmojiError(null);
+    setEmojiUploading(true);
+    try {
+      await addCustomEmoji(file, emojiName || file.name.split('.')[0], user.id, user.username);
+      setEmojiName('');
+    } catch (err) {
+      setEmojiError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setEmojiUploading(false);
     }
   };
 
@@ -190,6 +222,69 @@ const ProfileSettings: React.FC = () => {
                 placeholder="Tell us about yourself..."
               />
             </div>
+          </div>
+
+          {/* Custom emojis */}
+          <div className="form-section panel">
+            <h2 className="section-title">
+              MY CUSTOM EMOJIS ({myEmojis.length}/{MAX_CUSTOM_EMOJIS_PER_USER})
+            </h2>
+            <p className="avatar-upload-hint">
+              Upload your own emojis — max 256 KB each, images only. Everyone on the server can use them by typing :name:
+            </p>
+
+            {myEmojis.length < MAX_CUSTOM_EMOJIS_PER_USER && (
+              <div className="emoji-upload-row">
+                <input
+                  className="input-95 emoji-name-input"
+                  type="text"
+                  placeholder="Emoji name (e.g. catjam)"
+                  value={emojiName}
+                  onChange={e => setEmojiName(e.target.value)}
+                  maxLength={32}
+                />
+                <button
+                  type="button"
+                  className="button-95"
+                  onClick={() => emojiInputRef.current?.click()}
+                  disabled={emojiUploading}
+                >
+                  {emojiUploading ? '⏳ Uploading…' : '📎 Upload Emoji'}
+                </button>
+                <input
+                  ref={emojiInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleEmojiFileChange}
+                />
+              </div>
+            )}
+
+            {emojiError && (
+              <div className="avatar-upload-error">{emojiError}</div>
+            )}
+
+            {myEmojis.length > 0 && (
+              <div className="my-emoji-grid">
+                {myEmojis.map(e => (
+                  <div key={e.id} className="my-emoji-item">
+                    <img src={e.url} alt={e.name} className="my-emoji-img" />
+                    <span className="my-emoji-name">:{e.name}:</span>
+                    <button
+                      type="button"
+                      className="button-95 my-emoji-del"
+                      onClick={() => deleteCustomEmoji(e.id)}
+                      title="Delete"
+                    >🗑️</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {myEmojis.length === 0 && (
+              <div className="avatar-section-divider">No custom emojis yet — upload one above!</div>
+            )}
           </div>
 
           <div className="form-actions">
