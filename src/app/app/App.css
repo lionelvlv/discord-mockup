@@ -139,20 +139,41 @@
   z-index: 50;
 }
 
+/* VoicePanel mount containers — panel is always in DOM, position changes */
+.voice-panel-mount-expanded {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* When collapsed: position off-screen but keep mounted so WebRTC stays alive.
+   width/height 0 + overflow hidden means it takes no layout space. */
+.voice-panel-mount-collapsed {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* Expanded — full call panel at bottom of main section */
 .voice-call-overlay.expanded {
   height: 340px;
   border-top: 2px solid var(--border-darker);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Collapsed — thin status bar */
 .voice-call-overlay.collapsed {
   height: 36px;
   border-top: 2px solid var(--border-darker);
+  position: relative; /* needed so voice-panel-mount-collapsed absolute child works */
 }
 
 .voice-call-expanded {
-  height: 100%;
+  /* Header strip only — VoicePanel lives in sibling .voice-panel-mount-expanded */
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--surface-1);

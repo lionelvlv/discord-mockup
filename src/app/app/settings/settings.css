@@ -71,3 +71,95 @@
   font-weight: bold;
   font-size: 11px;
 }
+
+/* ── Custom avatar upload ─────────────────────────────────────────────────── */
+.avatar-preview-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.avatar-preview-large {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-uploading-label {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--accent-primary);
+  white-space: nowrap;
+}
+
+.avatar-preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.avatar-upload-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.avatar-upload-error {
+  font-size: 10px;
+  color: #c00;
+  padding: 4px 6px;
+  background: #fff0f0;
+  border: 1px inset var(--border-dark);
+}
+
+.avatar-section-divider {
+  text-align: center;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin: 12px 0 10px;
+  letter-spacing: 1px;
+}
+
+.avatar-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.avatar-option {
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px outset var(--border-light);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-style 0.05s;
+}
+
+.avatar-option:hover { border-style: inset; }
+.avatar-option.selected {
+  border-style: inset;
+  background: var(--win98-highlight);
+  outline: 2px solid var(--accent-primary);
+}
+
+.save-success {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #e8ffe8;
+  color: var(--status-online);
+  font-size: 10px;
+  font-weight: bold;
+}
+
+@media (max-width: 520px) {
+  .avatar-preview-row { flex-direction: column; align-items: center; }
+}

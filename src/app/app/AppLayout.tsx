@@ -41,43 +41,58 @@ const AppInner: React.FC = () => {
         </Routes>
 
         {/* Persistent voice call panel — renders outside Routes so navigation
-            doesn't unmount it. Collapsed to a status bar when minimised. */}
+            doesn't unmount it. Collapsed to a status bar when minimised.
+            CRITICAL: VoicePanel must ALWAYS be mounted while activeVoice is set.
+            Never conditionally render VoicePanel inside isExpanded — that would
+            unmount it when collapsing, triggering the cleanup effect and leaving
+            the voice channel. Use CSS display:none to hide the expanded view. */}
         {activeVoice && (
           <div className={`voice-call-overlay ${isExpanded ? 'expanded' : 'collapsed'}`}>
-            {isExpanded ? (
-              <div className="voice-call-expanded panel">
-                <div className="voice-call-expanded-header panel-outset">
-                  <span className="pixel-font" style={{ fontSize: '8px' }}>
-                    🔊 {activeVoice.channelName.toUpperCase()}
-                  </span>
-                  <button
-                    className="button-95 voice-minimize-btn"
-                    onClick={() => setExpanded(false)}
-                    title="Minimise"
-                  >─</button>
-                </div>
-                <div className="voice-call-expanded-body">
-                  <VoicePanel
-                    channelId={activeVoice.channelId}
-                    channelName={activeVoice.channelName}
-                    onLeave={leaveVoice}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="voice-call-bar panel-outset" onClick={() => setExpanded(true)}>
-                <span className={`voice-call-bar-icon ${localIsSpeaking ? 'speaking-pulse' : ''}`}>🔊</span>
-                <span className="voice-call-bar-name">{activeVoice.channelName}</span>
-                <span className="voice-call-bar-status" style={{ color: localIsSpeaking ? 'var(--status-online)' : undefined }}>
-                  {localIsSpeaking ? '● Speaking' : 'Voice Connected'}
+            {/* Expanded header — only visible when expanded */}
+            <div className="voice-call-expanded panel" style={{ display: isExpanded ? 'flex' : 'none' }}>
+              <div className="voice-call-expanded-header panel-outset">
+                <span className="pixel-font" style={{ fontSize: '8px' }}>
+                  🔊 {activeVoice.channelName.toUpperCase()}
                 </span>
                 <button
-                  className="button-95 voice-leave-btn"
-                  onClick={(e) => { e.stopPropagation(); leaveVoice(); }}
-                  title="Leave voice"
-                >✕</button>
+                  className="button-95 voice-minimize-btn"
+                  onClick={() => setExpanded(false)}
+                  title="Minimise"
+                >─</button>
               </div>
-            )}
+              <div className="voice-call-expanded-body">
+                {/* VoicePanel is ALWAYS rendered here — never conditionally.
+                    Unmounting it would trigger cleanup and leave the channel. */}
+              </div>
+            </div>
+
+            {/* VoicePanel always mounted — positioned absolutely when collapsed
+                so it stays in the DOM but takes no visible space */}
+            <div className={isExpanded ? 'voice-panel-mount-expanded' : 'voice-panel-mount-collapsed'}>
+              <VoicePanel
+                channelId={activeVoice.channelId}
+                channelName={activeVoice.channelName}
+                onLeave={leaveVoice}
+              />
+            </div>
+
+            {/* Collapsed status bar — only visible when collapsed */}
+            <div
+              className="voice-call-bar panel-outset"
+              style={{ display: isExpanded ? 'none' : 'flex' }}
+              onClick={() => setExpanded(true)}
+            >
+              <span className={`voice-call-bar-icon ${localIsSpeaking ? 'speaking-pulse' : ''}`}>🔊</span>
+              <span className="voice-call-bar-name">{activeVoice.channelName}</span>
+              <span className="voice-call-bar-status" style={{ color: localIsSpeaking ? 'var(--status-online)' : undefined }}>
+                {localIsSpeaking ? '● Speaking' : 'Voice Connected'}
+              </span>
+              <button
+                className="button-95 voice-leave-btn"
+                onClick={(e) => { e.stopPropagation(); leaveVoice(); }}
+                title="Leave voice"
+              >✕</button>
+            </div>
           </div>
         )}
       </div>

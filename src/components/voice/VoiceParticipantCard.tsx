@@ -141,9 +141,12 @@ function VoiceParticipantCard({ participant, onSpeakingChange }: Props) {
     };
   }, [participant.stream, participant.userId, isOwn, trackVersion]);
 
+  // Derive live-video purely from stream track state — do NOT rely on isCameraOn /
+  // isScreenSharing flags. Those flags are only set on the LOCAL participant; remote
+  // participants never get them updated. Checking the actual track readyState means
+  // both the local and remote view correctly show/hide video when tracks stop.
   const hasLiveVideo =
     !!participant.stream &&
-    (participant.isCameraOn || participant.isScreenSharing) &&
     participant.stream.getVideoTracks().some((t) => t.readyState === 'live' && t.enabled);
 
   const handleFullscreen = () => {
