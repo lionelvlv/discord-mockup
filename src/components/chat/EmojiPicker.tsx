@@ -142,6 +142,13 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) => {
 
   const activeTabData = tabs[activeTab];
   const isCustomTab = (activeTabData as any).isCustom;
+  const isRecentTab = activeTab === 0 && !isCustomTab;
+
+  // Build a lookup map for custom emojis so Recent tab can render them as images
+  const customEmojiMap = useMemo(
+    () => new Map(customEmojis.map(e => [`:${e.name}:`, e])),
+    [customEmojis]
+  );
 
   // Search across all standard emojis
   const searchResults = useMemo(() => {
@@ -206,9 +213,18 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) => {
                 <img src={e.url} alt={e.name} className="emoji-custom-img" />
               </button>
             ))
-          : (displayEmojis as string[]).map((em, i) => (
-              <button key={i} className="emoji-btn" onClick={() => handleSelect(em)}>{em}</button>
-            ))
+          : (displayEmojis as string[]).map((em, i) => {
+              // Recent tab: custom emoji tokens stored as ":name:" need image rendering
+              const customEntry = isRecentTab ? customEmojiMap.get(em) : undefined;
+              if (customEntry) {
+                return (
+                  <button key={i} className="emoji-btn emoji-btn-custom" onClick={() => handleCustomSelect(customEntry)} title={em}>
+                    <img src={customEntry.url} alt={customEntry.name} className="emoji-custom-img" />
+                  </button>
+                );
+              }
+              return <button key={i} className="emoji-btn" onClick={() => handleSelect(em)}>{em}</button>;
+            })
         }
         {displayEmojis.length === 0 && (
           <div className="emoji-empty">

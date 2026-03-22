@@ -8,15 +8,17 @@ import './UserPanel.css';
 
 interface UserPanelProps {
   user: User;
+  onNavigate?: () => void;
 }
 
-const UserPanel: React.FC<UserPanelProps> = ({ user }) => {
+const UserPanel: React.FC<UserPanelProps> = ({ user, onNavigate }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
 
   const handleSettings = () => {
     setShowMenu(false);
+    onNavigate?.();
     navigate('/app/settings/profile');
   };
 

@@ -362,3 +362,17 @@
 .attachment-video {
   filter: saturate(0.9) contrast(1.03);
 }
+
+/* Reaction emoji picker — positioned relative to the message */
+.reaction-emoji-picker-wrap {
+  position: relative;
+  height: 0;
+  overflow: visible;
+  z-index: 100;
+}
+
+.reaction-emoji-picker-wrap .emoji-picker {
+  bottom: auto;
+  top: 0;
+  left: 0;
+}

@@ -4,9 +4,9 @@ import { deleteMessage, toggleReaction } from '../../features/chat/api';
 import { Message, Attachment } from '../../types/message';
 import { User } from '../../types/user';
 import { formatTime } from '../../lib/time';
-import { REACTION_EMOJIS } from '../../lib/constants';
 import { detectEmbeds, EmbedInfo, renderTextWithLinks } from '../../lib/mediaUpload';
 import { useCustomEmojis, RenderWithCustomEmojis } from './CustomEmojiRenderer';
+import EmojiPicker from './EmojiPicker';
 import Avatar from '../ui/Avatar';
 import './MessageItem.css';
 
@@ -122,12 +122,14 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
       )}
 
       {showReactions && (
-        <div className="reaction-picker panel">
-          {REACTION_EMOJIS.map(emoji => (
-            <button key={emoji} className="reaction-option" onClick={() => handleReaction(emoji)}>
-              {emoji}
-            </button>
-          ))}
+        <div className="reaction-emoji-picker-wrap">
+          <EmojiPicker
+            onSelect={(emoji, isCustom, customUrl) => {
+              handleReaction(emoji);
+              setShowReactions(false);
+            }}
+            onClose={() => setShowReactions(false)}
+          />
         </div>
       )}
     </div>

@@ -49,7 +49,7 @@ const AppInner: React.FC = () => {
       <div className="left-section">
         <LeftRail onNavigate={handleNavigate} />
         {activeVoice && voiceMode === 'mini' && <VoiceMiniPanel />}
-        <UserPanel user={user} />
+        <UserPanel user={user} onNavigate={handleNavigate} />
       </div>
 
       {/* ── Main section ───────────────────────────────────────────────────── */}

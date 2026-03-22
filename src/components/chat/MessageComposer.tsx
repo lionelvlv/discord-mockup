@@ -36,6 +36,19 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+
+  // Close pickers when user clicks anywhere outside the composer
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (composerRef.current && !composerRef.current.contains(e.target as Node)) {
+        setShowGifPicker(false);
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Revoke object URLs on unmount to avoid memory leaks
   useEffect(() => {
@@ -179,6 +192,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
 
   return (
     <div
+      ref={composerRef}
       className={`message-composer panel-outset ${dragOver ? 'drag-over' : ''}`}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
