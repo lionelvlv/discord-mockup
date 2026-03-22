@@ -26,7 +26,7 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
     const unsub = onSnapshot(collection(db, 'channels'), snap => {
       const list = snap.docs
         .map(d => ({ id: d.id, ...d.data() } as Channel))
-        .filter(c => !c.isVoiceChannel && !c.isDeleted);
+        .filter(c => !c.isVoiceChannel);
       setChannels(list);
     });
     return unsub;
