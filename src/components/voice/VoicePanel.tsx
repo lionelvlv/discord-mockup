@@ -104,10 +104,9 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
     if (cleanupRef.current) await cleanupRef.current();
   };
 
-  // Flag: true only when the user explicitly leaves (leave button / kick).
-  // The useEffect cleanup fires on ANY re-render with changed deps — we must NOT
-  // call leaveVoiceChannel() in those cases or the user gets booted on navigation.
-  const isTrulyLeavingRef = useRef(false);
+  // Flag: true only when kicked, so the kick handler can call leaveVoiceChannel
+  // before onLeave() fires (otherwise the cleanup would be skipped).
+  // For normal nav: channelId doesn't change so cleanup never runs anyway.
 
   useEffect(() => {
     if (!user) return;
@@ -144,12 +143,15 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
         signalUnsubRef.current = subscribeToSignals(user.id, channelId, async (signal) => {
           if (signal.type === 'kick') {
             alert('You have been removed from the voice channel by an administrator.');
-            isTrulyLeavingRef.current = true;
             signalUnsubRef.current?.();
             voiceUnsubRef.current?.();
             presenceUnsubRef.current?.();
             webrtcInstance.cleanup();
-            if (localLeaveCleanup) await localLeaveCleanup();
+            // Call leaveCleanup directly and clear the ref so the effect return
+            // doesn't call it a second time when the component eventually unmounts.
+            const cleanup = localLeaveCleanup;
+            localLeaveCleanup = null;
+            if (cleanup) await cleanup();
             onLeave();
             return;
           }
@@ -204,10 +206,7 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
 
     init();
 
-    const onBeforeUnload = () => {
-      // Tab close — let RTDB onDisconnect handle presence cleanup server-side
-      webrtcRef.current?.cleanup();
-    };
+    const onBeforeUnload = () => webrtcRef.current?.cleanup();
     window.addEventListener('beforeunload', onBeforeUnload);
 
     return () => {
@@ -217,14 +216,10 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
       voiceUnsubRef.current?.();
       presenceUnsubRef.current?.();
       webrtcInstance.cleanup();
-      // Only fully leave the channel when explicitly requested (leave button / kick).
-      // Do NOT call leaveVoiceChannel on incidental re-renders (navigation, state
-      // updates) — that would boot the user from the call on every text channel click.
-      // RTDB onDisconnect handles cleanup on real disconnects (tab close, crash).
-      if (isTrulyLeavingRef.current && localLeaveCleanup) {
-        localLeaveCleanup().catch(console.error);
-        isTrulyLeavingRef.current = false;
-      }
+      // Always clean up — this runs only when channelId changes (channel switch)
+      // or when the component unmounts (activeVoice → null via explicit leave).
+      // Text/DM navigation doesn't change channelId, so this won't fire for that.
+      if (localLeaveCleanup) localLeaveCleanup().catch(console.error);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, user?.id]);
@@ -291,7 +286,6 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
   };
 
   const handleLeave = async () => {
-    isTrulyLeavingRef.current = true;
     soundManager.play('leave');
     await doCleanup();
     onLeave();

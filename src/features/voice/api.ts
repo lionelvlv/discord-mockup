@@ -23,6 +23,9 @@ import { VoiceChannel, SignalingData } from '../../types/voice';
 
 // Join a voice channel. Writes to Firestore and registers an RTDB onDisconnect
 // so the user is removed even if the tab is closed or the connection drops.
+// Also subscribes to .info/connected to re-register presence on reconnect —
+// without this, a brief RTDB disconnect (which happens on every page navigation)
+// fires the onDisconnect and removes the user from the channel silently.
 // Returns a cleanup function to call on intentional leave.
 export const joinVoiceChannel = async (
   channelId: string,
@@ -37,14 +40,27 @@ export const joinVoiceChannel = async (
     await updateDoc(voiceRef, { participants: arrayUnion(userId) });
   }
 
-  // RTDB presence node — enables server-side onDisconnect cleanup
   const presenceRef = rtdbRef(rtdb, `voicePresence/${channelId}/${userId}`);
+  const connectedRef = rtdbRef(rtdb, '.info/connected');
+
+  // Set initial presence
   await set(presenceRef, true);
-  const dcRef = onDisconnect(presenceRef);
-  await dcRef.remove();
+  await onDisconnect(presenceRef).remove();
+
+  // Re-register presence whenever RTDB reconnects.
+  // RTDB briefly disconnects on every page navigation in SPAs; without this
+  // the onDisconnect fires and the user silently disappears from the channel.
+  const connectedHandler = onValue(connectedRef, async (snap) => {
+    if (!snap.val()) return; // disconnected — onDisconnect will handle cleanup
+    // Reconnected: re-register server-side cleanup and re-assert presence
+    await onDisconnect(presenceRef).remove();
+    await set(presenceRef, true);
+  });
 
   return async () => {
-    await dcRef.cancel();
+    // Tear down the reconnect listener first
+    off(connectedRef, 'value', connectedHandler);
+    await onDisconnect(presenceRef).cancel();
     await remove(presenceRef);
     await leaveVoiceChannel(channelId, userId);
   };
