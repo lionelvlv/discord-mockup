@@ -95,41 +95,51 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
 
         {message.reactions && message.reactions.length > 0 && (
           <div className="message-reactions">
-            {message.reactions.map((reaction) => (
-              <button
-                key={reaction.emoji}
-                className={`reaction-badge ${reaction.userIds.includes(currentUser?.id || '') ? 'active' : ''}`}
-                onClick={() => handleReaction(reaction.emoji)}
-              >
-                {reaction.emoji} {reaction.userIds.length}
-              </button>
-            ))}
+            {message.reactions.map((reaction) => {
+              const isCustom = reaction.emoji.startsWith(':') && reaction.emoji.endsWith(':');
+              const customEntry = isCustom ? customEmojis.find(e => `:${e.name}:` === reaction.emoji) : null;
+              return (
+                <button
+                  key={reaction.emoji}
+                  className={`reaction-badge ${reaction.userIds.includes(currentUser?.id || '') ? 'active' : ''}`}
+                  onClick={() => handleReaction(reaction.emoji)}
+                  title={reaction.emoji}
+                >
+                  {customEntry
+                    ? <img src={customEntry.url} alt={reaction.emoji} className="reaction-custom-emoji" />
+                    : reaction.emoji
+                  }
+                  {' '}{reaction.userIds.length}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
       {showActions && (
         <div className="message-actions">
-          <button className="action-btn button-95" onClick={() => setShowReactions(!showReactions)} title="React">
-            😊
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button className="action-btn button-95" onClick={() => setShowReactions(!showReactions)} title="React">
+              😊
+            </button>
+            {showReactions && (
+              <div className="reaction-picker-anchor">
+                <EmojiPicker
+                  onSelect={(emoji) => {
+                    handleReaction(emoji);
+                    setShowReactions(false);
+                  }}
+                  onClose={() => setShowReactions(false)}
+                />
+              </div>
+            )}
+          </div>
           {canDelete && (
             <button className="action-btn button-95" onClick={handleDelete} title="Delete">
               🗑️
             </button>
           )}
-        </div>
-      )}
-
-      {showReactions && (
-        <div className="reaction-emoji-picker-wrap">
-          <EmojiPicker
-            onSelect={(emoji, isCustom, customUrl) => {
-              handleReaction(emoji);
-              setShowReactions(false);
-            }}
-            onClose={() => setShowReactions(false)}
-          />
         </div>
       )}
     </div>

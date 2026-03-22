@@ -363,16 +363,26 @@
   filter: saturate(0.9) contrast(1.03);
 }
 
-/* Reaction emoji picker — positioned relative to the message */
-.reaction-emoji-picker-wrap {
-  position: relative;
-  height: 0;
-  overflow: visible;
-  z-index: 100;
+/* Reaction picker anchors to the 😊 button — floats up and to the left */
+.reaction-picker-anchor {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  z-index: 300;
 }
 
-.reaction-emoji-picker-wrap .emoji-picker {
-  bottom: auto;
-  top: 0;
-  left: 0;
+/* When inside the reaction anchor, the picker opens upward from bottom-right */
+.reaction-picker-anchor .emoji-picker {
+  position: static;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+}
+
+/* Custom emoji in reaction badge */
+.reaction-custom-emoji {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 2px;
 }

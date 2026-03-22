@@ -161,20 +161,24 @@ const VoiceChannelList: React.FC<VoiceChannelListProps> = ({ onNavigate, search 
     });
   };
 
+  const filteredVoiceChannels = voiceChannels.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()));
+
   return (
     <>
       <div className="voice-channel-list">
-        <div className="list-header pixel-font">
-          <span>VOICE CHANNELS</span>
-          <button 
-            className="create-channel-btn"
-            onClick={() => setShowCreateModal(true)}
-            title="Create Voice Channel"
-          >
-            +
-          </button>
-        </div>
-        {voiceChannels.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map((channel) => {
+        {(!search || filteredVoiceChannels.length > 0) && (
+          <div className="list-header pixel-font">
+            <span>VOICE CHANNELS</span>
+            <button
+              className="create-channel-btn"
+              onClick={() => setShowCreateModal(true)}
+              title="Create Voice Channel"
+            >
+              +
+            </button>
+          </div>
+        )}
+        {filteredVoiceChannels.map((channel) => {
           const participants = participantsByChannel[channel.id] || [];
           const participantCount = participants.length;
           const isExpanded = expandedChannels.has(channel.id);

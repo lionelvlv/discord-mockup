@@ -99,16 +99,20 @@ const DMList: React.FC<DMListProps> = ({ onNavigate, search = '' }) => {
     return location.pathname === `/app/dm/${otherUserId}`;
   };
 
+  const filteredDMs = dms.filter(dm => {
+    if (!search) return true;
+    const otherId = dm.userA === user?.id ? dm.userB : dm.userA;
+    const otherUser = users.get(otherId);
+    return otherUser?.username?.toLowerCase().includes(search.toLowerCase());
+  });
+
   return (
     <>
       <div className="dm-list">
-        <div className="list-header pixel-font">DIRECT MESSAGES</div>
-        {dms.filter(dm => {
-          if (!search) return true;
-          const otherId = dm.userA === user?.id ? dm.userB : dm.userA;
-          const otherUser = users.get(otherId);
-          return otherUser?.username?.toLowerCase().includes(search.toLowerCase());
-        }).map((dm) => {
+        {(!search || filteredDMs.length > 0) && (
+          <div className="list-header pixel-font">DIRECT MESSAGES</div>
+        )}
+        {filteredDMs.map((dm) => {
           const otherUser = getOtherUser(dm);
           if (!otherUser) return null;
           const isDeleted = otherUser.isDeleted;

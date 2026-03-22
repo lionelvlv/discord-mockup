@@ -120,23 +120,27 @@ const ChannelList: React.FC<ChannelListProps> = ({ onNavigate, search = '' }) =>
     setContextMenu(null);
   };
 
+  const filteredChannels = channels.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()));
+
   return (
     <>
       <div className="channel-list">
-        <div className="list-header pixel-font">
-          <span>CHANNELS</span>
-          <button
-            className="create-channel-btn"
-            onClick={() => setShowCreateModal(true)}
-            title="Create Channel"
-          >
-            +
-          </button>
-        </div>
-        {channels.length === 0 && (
+        {(!search || filteredChannels.length > 0) && (
+          <div className="list-header pixel-font">
+            <span>CHANNELS</span>
+            <button
+              className="create-channel-btn"
+              onClick={() => setShowCreateModal(true)}
+              title="Create Channel"
+            >
+              +
+            </button>
+          </div>
+        )}
+        {channels.length === 0 && !search && (
           <div style={{ padding: '8px', fontSize: '10px', color: '#666' }}>No channels found</div>
         )}
-        {channels.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map((channel) => (
+        {filteredChannels.map((channel) => (
           <div
             key={channel.id}
             className={`channel-item list-item-95 ${isChannelActive(channel.id) ? 'selected' : ''}`}
