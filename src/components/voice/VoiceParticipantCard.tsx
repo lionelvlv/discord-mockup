@@ -6,12 +6,10 @@ import './VoiceParticipantCard.css';
 
 interface Props { participant: VoiceParticipant; onSpeakingChange?: (speaking: boolean) => void; }
 
-// Web Audio API speaking detection — measures RMS of the audio signal every
-// animation frame. If the level exceeds SPEAK_THRESHOLD the participant is
-// marked as speaking; a short debounce prevents rapid flicker on silence.
-const SPEAK_THRESHOLD = 0.015;  // 0–1 normalised RMS (tune if too sensitive)
-const SILENCE_DEBOUNCE_MS = 400; // how long below threshold before "not speaking"
+const SPEAK_THRESHOLD = 0.015;
+const SILENCE_DEBOUNCE_MS = 400;
 
+// ── Speaking detector (unchanged) ────────────────────────────────────────────
 function useSpeakingDetector(stream: MediaStream | undefined, enabled: boolean) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const rafRef = useRef<number>(0);
@@ -25,50 +23,32 @@ function useSpeakingDetector(stream: MediaStream | undefined, enabled: boolean) 
       setIsSpeaking(false);
       return;
     }
-
-    // Lazily create an AudioContext — reuse if one already exists for this card
     if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
       audioCtxRef.current = new AudioContext();
     }
     const ctx = audioCtxRef.current;
-
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.4;
     analyserRef.current = analyser;
-
     const source = ctx.createMediaStreamSource(stream);
     source.connect(analyser);
     sourceRef.current = source;
-
     const buf = new Float32Array(analyser.fftSize);
-
     const tick = () => {
       analyser.getFloatTimeDomainData(buf);
-      // RMS (root mean square) of the signal
       let sumSq = 0;
       for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
       const rms = Math.sqrt(sumSq / buf.length);
-
       if (rms > SPEAK_THRESHOLD) {
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
+        if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
         setIsSpeaking(true);
       } else if (silenceTimerRef.current === null) {
-        silenceTimerRef.current = setTimeout(() => {
-          setIsSpeaking(false);
-          silenceTimerRef.current = null;
-        }, SILENCE_DEBOUNCE_MS);
+        silenceTimerRef.current = setTimeout(() => { setIsSpeaking(false); silenceTimerRef.current = null; }, SILENCE_DEBOUNCE_MS);
       }
-
       rafRef.current = requestAnimationFrame(tick);
     };
-
-    // AudioContext requires a user gesture to start on some browsers
     ctx.resume().then(() => { rafRef.current = requestAnimationFrame(tick); });
-
     return () => {
       cancelAnimationFrame(rafRef.current);
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -78,7 +58,6 @@ function useSpeakingDetector(stream: MediaStream | undefined, enabled: boolean) 
     };
   }, [stream, enabled]);
 
-  // Tear down AudioContext on component unmount
   useEffect(() => {
     return () => {
       cancelAnimationFrame(rafRef.current);
@@ -92,23 +71,106 @@ function useSpeakingDetector(stream: MediaStream | undefined, enabled: boolean) 
   return isSpeaking;
 }
 
+// ── Retro audio processor — McDonald's drive-thru speaker effect ──────────────
+// Chain: source → bandpass (300-3400 Hz telephone range) → waveshaper (soft clip/distort)
+// → gain → destination. This creates that compressed, tinny, lo-fi walkie-talkie sound.
+function useRetroAudio(stream: MediaStream | undefined, audioEl: React.RefObject<HTMLAudioElement>) {
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const nodesRef = useRef<AudioNode[]>([]);
+
+  useEffect(() => {
+    if (!stream || !audioEl.current) return;
+    const tracks = stream.getAudioTracks();
+    if (tracks.length === 0) return;
+
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+
+    const source = ctx.createMediaStreamSource(stream);
+
+    // Bandpass: cut everything below 300 Hz and above 3400 Hz (telephone codec range)
+    const lowCut = ctx.createBiquadFilter();
+    lowCut.type = 'highpass';
+    lowCut.frequency.value = 300;
+    lowCut.Q.value = 0.7;
+
+    const highCut = ctx.createBiquadFilter();
+    highCut.type = 'lowpass';
+    highCut.frequency.value = 3400;
+    highCut.Q.value = 0.7;
+
+    // Presence boost around 1-2 kHz — that nasal "speakerphone" mid-peak
+    const midBoost = ctx.createBiquadFilter();
+    midBoost.type = 'peaking';
+    midBoost.frequency.value = 1500;
+    midBoost.Q.value = 1.2;
+    midBoost.gain.value = 8; // +8 dB
+
+    // Waveshaper — soft saturation / gentle clipping for that compressed crunch
+    const distortion = ctx.createWaveShaper();
+    const makeDistortionCurve = (amount: number) => {
+      const n = 256;
+      const curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const x = (i * 2) / n - 1;
+        // Soft-knee clip with amount controlling drive
+        curve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+      }
+      return curve;
+    };
+    distortion.curve = makeDistortionCurve(60); // 60 = moderately crunchy
+    distortion.oversample = '2x';
+
+    // Slight gain reduction after distortion (saturation adds volume)
+    const gain = ctx.createGain();
+    gain.gain.value = 0.75;
+
+    // Chain everything
+    source.connect(lowCut);
+    lowCut.connect(highCut);
+    highCut.connect(midBoost);
+    midBoost.connect(distortion);
+    distortion.connect(gain);
+    gain.connect(ctx.destination);
+    nodesRef.current = [source, lowCut, highCut, midBoost, distortion, gain];
+
+    // The audio element is now bypassed — Web Audio handles output to speakers.
+    // Mute the element so we don't get double audio.
+    audioEl.current.muted = true;
+
+    ctx.resume().catch(() => {});
+
+    return () => {
+      nodesRef.current.forEach(n => { try { n.disconnect(); } catch {} });
+      ctx.close().catch(() => {});
+      audioCtxRef.current = null;
+      if (audioEl.current) audioEl.current.muted = false;
+    };
+  }, [stream]);
+
+  useEffect(() => {
+    return () => {
+      nodesRef.current.forEach(n => { try { n.disconnect(); } catch {} });
+      audioCtxRef.current?.close().catch(() => {});
+    };
+  }, []);
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 function VoiceParticipantCard({ participant, onSpeakingChange }: Props) {
   const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isOwn = user?.id === participant.userId;
 
+  // trackVersion forces re-render when any video track changes state
   const [trackVersion, setTrackVersion] = useState(0);
 
-  // Detect speaking — for own card use local stream directly;
-  // for remote cards use the received stream.
-  // Muted participants are never "speaking".
-  const isSpeaking = useSpeakingDetector(
-    participant.stream,
-    !participant.isMuted
-  );
+  const isSpeaking = useSpeakingDetector(participant.stream, !participant.isMuted);
 
-  // Propagate speaking state to parent (e.g. VoicePanel → VoiceContext → collapsed bar)
+  // Apply retro audio processing to remote participants
+  useRetroAudio(!isOwn ? participant.stream : undefined, audioRef);
+
   useEffect(() => {
     onSpeakingChange?.(isSpeaking);
   }, [isSpeaking, onSpeakingChange]);
@@ -121,33 +183,37 @@ function VoiceParticipantCard({ participant, onSpeakingChange }: Props) {
 
     if (audioRef.current && !isOwn) {
       audioRef.current.srcObject = stream;
-      audioRef.current.play().catch(() => {});
+      // Don't call play() here — useRetroAudio handles audio routing.
+      // We keep srcObject set so the element stays ready if retro audio isn't available.
     }
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch(() => {});
     }
 
-    const onTrackChange = () => {
-      console.log(`[VoiceCard] Track change on stream for ${participant.username}`);
-      setTrackVersion((v) => v + 1);
-    };
-    stream.addEventListener('addtrack', onTrackChange);
-    stream.addEventListener('removetrack', onTrackChange);
+    // Re-render on stream structure changes (addtrack / removetrack)
+    const onStreamChange = () => setTrackVersion(v => v + 1);
+    stream.addEventListener('addtrack', onStreamChange);
+    stream.addEventListener('removetrack', onStreamChange);
+
+    // CRITICAL FIX: subscribe to each video track's 'ended' event.
+    // When a user stops screensharing or camera, the track's readyState becomes
+    // 'ended' but addtrack/removetrack do NOT fire. We must listen to track.onended
+    // directly to trigger a re-render that hides the video and shows the avatar.
+    const videoTracks = stream.getVideoTracks();
+    videoTracks.forEach(t => { t.addEventListener('ended', onStreamChange); });
 
     return () => {
-      stream.removeEventListener('addtrack', onTrackChange);
-      stream.removeEventListener('removetrack', onTrackChange);
+      stream.removeEventListener('addtrack', onStreamChange);
+      stream.removeEventListener('removetrack', onStreamChange);
+      videoTracks.forEach(t => { t.removeEventListener('ended', onStreamChange); });
     };
   }, [participant.stream, participant.userId, isOwn, trackVersion]);
 
-  // Derive live-video purely from stream track state — do NOT rely on isCameraOn /
-  // isScreenSharing flags. Those flags are only set on the LOCAL participant; remote
-  // participants never get them updated. Checking the actual track readyState means
-  // both the local and remote view correctly show/hide video when tracks stop.
+  // hasLiveVideo: check readyState AND enabled on every render (trackVersion bumps trigger this)
   const hasLiveVideo =
     !!participant.stream &&
-    participant.stream.getVideoTracks().some((t) => t.readyState === 'live' && t.enabled);
+    participant.stream.getVideoTracks().some(t => t.readyState === 'live' && t.enabled);
 
   const handleFullscreen = () => {
     const el = videoRef.current;
@@ -182,14 +248,13 @@ function VoiceParticipantCard({ participant, onSpeakingChange }: Props) {
         </div>
       </div>
 
+      {/* Audio element stays in DOM; useRetroAudio mutes it and routes through Web Audio */}
       {!isOwn && <audio ref={audioRef} autoPlay />}
 
       <div className="participant-info">
         <div className="participant-name">
           {participant.username}{isOwn && ' (You)'}
-          {isSpeaking && !participant.isMuted && (
-            <span className="speaking-badge" title="Speaking">🔊</span>
-          )}
+          {isSpeaking && !participant.isMuted && <span className="speaking-badge" title="Speaking">🔊</span>}
         </div>
         <div className="participant-status">
           {participant.isMuted && <span className="status-icon">🔇</span>}
