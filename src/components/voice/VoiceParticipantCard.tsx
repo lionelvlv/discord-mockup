@@ -179,8 +179,6 @@ function VoiceParticipantCard({ participant, onSpeakingChange }: Props) {
         </div>
       </div>
 
-      </div>{/* end participant-media-wrap */}
-
       {!isOwn && <audio ref={audioRef} autoPlay />}
 
       <div className="participant-info">
