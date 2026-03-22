@@ -37,6 +37,10 @@
   background: #000;
   border: 2px inset var(--border-dark);
   margin-bottom: 8px;
+  /* Early-2000s aesthetic: slightly desaturated, mild contrast boost, compressed */
+  filter: saturate(0.85) contrast(1.05) brightness(0.97);
+  /* Lower resolution rendering for that compressed webcam feel */
+  image-rendering: auto;
 }
 
 .participant-avatar {

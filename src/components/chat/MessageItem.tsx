@@ -5,7 +5,7 @@ import { Message, Attachment } from '../../types/message';
 import { User } from '../../types/user';
 import { formatTime } from '../../lib/time';
 import { REACTION_EMOJIS } from '../../lib/constants';
-import { detectEmbeds, EmbedInfo } from '../../lib/mediaUpload';
+import { detectEmbeds, EmbedInfo, renderTextWithLinks } from '../../lib/mediaUpload';
 import Avatar from '../ui/Avatar';
 import './MessageItem.css';
 
@@ -68,8 +68,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
         </div>
 
         {message.content && (
-          <div className="message-bubble panel-outset" style={{ whiteSpace: 'pre-wrap' }}>
-            {message.content}
+          <div className="message-bubble panel-outset">
+            {renderTextWithLinks(message.content).map((part, i) =>
+              typeof part === 'string'
+                ? part
+                : <a key={part.key} href={part.url} target="_blank" rel="noopener noreferrer" className="msg-link">{part.url}</a>
+            )}
           </div>
         )}
 
@@ -217,22 +221,78 @@ const EmbedRenderer: React.FC<{ embed: EmbedInfo }> = ({ embed }) => {
     return (
       <div className="attachment-image-wrap">
         <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer">
-          <img
-            src={embed.embedUrl}
-            alt="Linked image"
-            className="attachment-image"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-          />
+          <img src={embed.embedUrl} alt="Linked image" className="attachment-image" loading="lazy" />
         </a>
       </div>
     );
   }
 
-  // YouTube / Vimeo — explicitly trusted domains, no sandbox needed.
-  // Do NOT set referrerPolicy="no-referrer" — YouTube validates the embed origin
-  // via the Referer header; blocking it causes error 153 / identity.missing.referrer.
-  // fullscreen is handled via the allow attribute; allowFullScreen is redundant.
+  if (embed.kind === 'imgur_image') {
+    if (embed.meta?.isVideo === 'true') {
+      return (
+        <div className="attachment-video-wrap">
+          <video controls preload="metadata" className="attachment-video" loop>
+            <source src={embed.embedUrl} type="video/mp4" />
+          </video>
+          <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer" className="embed-source-link">↗ Imgur</a>
+        </div>
+      );
+    }
+    return (
+      <div className="attachment-image-wrap">
+        <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer">
+          <img src={embed.embedUrl} alt="Imgur" className="attachment-image" loading="lazy" />
+        </a>
+      </div>
+    );
+  }
+
+  if (embed.kind === 'imgur_album') {
+    return (
+      <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer" className="embed-card panel-inset">
+        <span className="embed-card-icon">🖼️</span>
+        <div className="embed-card-info">
+          <span className="embed-card-site">Imgur Album</span>
+          <span className="embed-card-url">{embed.originalUrl}</span>
+        </div>
+      </a>
+    );
+  }
+
+  if (embed.kind === 'spotify') {
+    return (
+      <div className="embed-video-wrap">
+        <iframe
+          src={embed.embedUrl}
+          className="embed-spotify"
+          title="Spotify"
+          frameBorder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+        />
+        <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer" className="embed-source-link">
+          ↗ {embed.originalUrl}
+        </a>
+      </div>
+    );
+  }
+
+  if (embed.kind === 'github_repo' || embed.kind === 'github_pr' || embed.kind === 'github_gist') {
+    const icon = embed.kind === 'github_gist' ? '📄' : embed.kind === 'github_pr' ? '🔀' : '📦';
+    const label = embed.kind === 'github_gist' ? 'GitHub Gist'
+      : embed.kind === 'github_pr' ? 'GitHub PR/Issue' : `GitHub — ${embed.meta?.repo ?? ''}`;
+    return (
+      <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer" className="embed-card panel-inset">
+        <span className="embed-card-icon">{icon}</span>
+        <div className="embed-card-info">
+          <span className="embed-card-site">{label}</span>
+          <span className="embed-card-url">{embed.originalUrl}</span>
+        </div>
+      </a>
+    );
+  }
+
+  // YouTube / Vimeo
   return (
     <div className="embed-video-wrap">
       <iframe
@@ -243,12 +303,7 @@ const EmbedRenderer: React.FC<{ embed: EmbedInfo }> = ({ embed }) => {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         loading="lazy"
       />
-      <a
-        href={embed.originalUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="embed-source-link"
-      >
+      <a href={embed.originalUrl} target="_blank" rel="noopener noreferrer" className="embed-source-link">
         ↗ {embed.originalUrl}
       </a>
     </div>

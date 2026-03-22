@@ -13,13 +13,15 @@ interface Props {
 const VoiceChannelPage: React.FC<Props> = ({ onJoin }) => {
   const { channelId } = useParams<{ channelId: string }>();
   const navigate = useNavigate();
-  const { activeVoice, joinVoice } = useVoice();
+  const { activeVoice, joinVoice, setExpanded } = useVoice();
 
   useEffect(() => {
     if (!channelId) return;
 
-    // Already in this exact call — just go back to chat view
+    // Already in this exact call — re-expand (fullscreen it) instead of doing nothing
     if (activeVoice?.channelId === channelId) {
+      setExpanded(true);
+      onJoin?.();
       navigate('/app/channel/general', { replace: true });
       return;
     }

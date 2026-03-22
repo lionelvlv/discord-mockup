@@ -68,3 +68,106 @@
   .member-item { min-height: 44px; padding: 10px 12px; }
   .list-header { font-size: 9px; padding: 10px 12px; min-height: 44px; }
 }
+
+/* ── Profile popup ────────────────────────────────────────────────────────── */
+.member-item.active {
+  background: var(--surface-3);
+  border-style: inset;
+}
+
+.profile-popup {
+  background: var(--surface-1);
+  border: 2px outset var(--border-light);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.profile-popup-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 6px;
+  background: linear-gradient(to right, #000080, #1084d0);
+  flex-shrink: 0;
+}
+
+.profile-popup-close {
+  width: 18px;
+  height: 16px;
+  padding: 0;
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.profile-popup-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 2px solid var(--border-dark);
+  background: var(--surface-2);
+}
+
+.profile-popup-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-popup-username {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.profile-popup-presence {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.profile-popup-bio {
+  margin: 10px;
+  padding: 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  min-height: 40px;
+}
+
+.profile-popup-bio--empty {
+  color: var(--text-muted);
+  font-style: italic;
+  border: none;
+  background: none;
+}
+
+.profile-popup-dm-btn {
+  margin: 0 10px 10px;
+  width: calc(100% - 20px);
+  padding: 6px;
+  font-size: 11px;
+}
+
+/* Mobile: popup appears at bottom center instead of anchored to cursor */
+@media (max-width: 768px) {
+  .profile-popup {
+    position: fixed !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: 64px !important;
+    left: 50% !important;
+    transform: translateX(-50%);
+    width: 90vw !important;
+    max-width: 340px;
+  }
+}
