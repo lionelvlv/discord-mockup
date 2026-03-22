@@ -1,0 +1,120 @@
+.voice-mini-panel {
+  flex-shrink: 0;
+  border-top: 2px solid var(--border-darker);
+  background: var(--surface-1);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+
+.voice-mini-panel.speaking {
+  box-shadow: inset 0 2px 0 var(--status-online);
+}
+
+/* Video preview */
+.mini-video-wrap {
+  position: relative;
+  cursor: pointer;
+  background: #000;
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.mini-video {
+  width: 100%;
+  max-height: 110px;
+  object-fit: contain;
+  display: block;
+}
+
+.mini-video-label {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  font-size: 9px;
+  color: #fff;
+  background: rgba(0,0,0,0.6);
+  padding: 1px 5px;
+  border-radius: 0;
+}
+
+/* Status row */
+.mini-status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-dark);
+  min-height: 28px;
+}
+
+.mini-status-row:hover { background: var(--surface-3); }
+
+.mini-speaking-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.mini-speaking-dot.active {
+  background: var(--status-online);
+  box-shadow: 0 0 4px var(--status-online);
+  animation: dot-pulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes dot-pulse {
+  from { box-shadow: 0 0 2px var(--status-online); }
+  to   { box-shadow: 0 0 8px var(--status-online); }
+}
+
+.mini-channel-name {
+  flex: 1;
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--status-online);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-you-label {
+  flex-shrink: 0;
+}
+
+/* Controls row */
+.mini-controls-row {
+  display: flex;
+  gap: 4px;
+  padding: 5px 6px;
+  background: var(--surface-2);
+  align-items: center;
+}
+
+.mini-btn {
+  flex: 1;
+  min-height: 30px;
+  font-size: 14px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-btn-active {
+  background: rgba(59,165,93,0.2);
+  border-color: var(--status-online);
+}
+
+.mini-btn-leave {
+  background: rgba(220, 53, 69, 0.15);
+  color: #dc3545;
+  font-size: 12px;
+}
+
+.mini-btn-leave:hover {
+  background: #dc3545;
+  color: #fff;
+}

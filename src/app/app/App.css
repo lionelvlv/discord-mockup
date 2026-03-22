@@ -133,54 +133,18 @@
   }
 }
 
-/* ── Persistent voice call overlay ──────────────────────────────────────── */
-.voice-call-overlay {
-  flex-shrink: 0;
-  z-index: 50;
-}
-
-/* VoicePanel mount containers — panel is always in DOM, position changes */
-.voice-panel-mount-expanded {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* When collapsed: position off-screen but keep mounted so WebRTC stays alive.
-   width/height 0 + overflow hidden means it takes no layout space. */
-.voice-panel-mount-collapsed {
+/* ── Voice call — full screen mode ─────────────────────────────────────── */
+.voice-fullscreen {
   position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-/* Expanded — full call panel at bottom of main section */
-.voice-call-overlay.expanded {
-  height: 420px;
-  border-top: 2px solid var(--border-darker);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* Collapsed — thin status bar */
-.voice-call-overlay.collapsed {
-  height: 36px;
-  border-top: 2px solid var(--border-darker);
-  position: relative; /* needed so voice-panel-mount-collapsed absolute child works */
-}
-
-.voice-call-expanded {
-  /* Header strip only — VoicePanel lives in sibling .voice-panel-mount-expanded */
-  flex-shrink: 0;
+  inset: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   background: var(--surface-1);
+  overflow: hidden;
 }
 
-.voice-call-expanded-header {
+.voice-fullscreen-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -190,7 +154,7 @@
   flex-shrink: 0;
 }
 
-.voice-call-expanded-header .pixel-font { color: #fff; }
+.voice-fullscreen-header .pixel-font { color: #fff; }
 
 .voice-minimize-btn {
   width: 20px;
@@ -200,112 +164,68 @@
   line-height: 1;
 }
 
-.voice-call-expanded-body {
+.voice-fullscreen-body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-/* Collapsed bar */
-.voice-call-bar {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  cursor: pointer;
-  background: var(--surface-2);
-  user-select: none;
+/* Hidden mount — keeps WebRTC + audio alive while viewing text channels.
+   Zero size, no pointer events, but the DOM is present so audio plays. */
+.voice-hidden-mount {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
 }
 
-.voice-call-bar:hover { background: var(--surface-3); }
+/* main-section needs position:relative so fullscreen overlay works */
+.main-section { position: relative; }
 
-.voice-call-bar-icon { font-size: 14px; transition: filter 0.1s; }
-.voice-call-bar-icon.speaking-pulse {
-  animation: bar-speak 0.5s ease-in-out infinite alternate;
-  filter: drop-shadow(0 0 4px var(--status-online));
-}
-@keyframes bar-speak {
-  from { transform: scale(1);   filter: drop-shadow(0 0 2px var(--status-online)); }
-  to   { transform: scale(1.2); filter: drop-shadow(0 0 7px var(--status-online)); }
-}
-
-.voice-call-bar-name {
-  font-weight: bold;
-  font-size: 11px;
-  color: var(--status-online);
-}
-
-.voice-call-bar-status {
-  font-size: 10px;
-  color: var(--text-muted);
-  flex: 1;
-  transition: color 0.15s;
-}
-.voice-call-bar-status:has(~ .speaking-pulse),
-.voice-call-bar-icon.speaking-pulse ~ .voice-call-bar-status {
-  color: var(--status-online);
-}
-
-.voice-leave-btn {
-  padding: 2px 8px;
-  font-size: 10px;
-  color: #c00;
-  font-weight: bold;
-}
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+.mobile-call-section { display: none; }
 
 @media (max-width: 768px) {
-  /* Desktop expanded overlay is not useful on mobile — hide it. The call tab
-     renders a full-screen VoicePanel via .mobile-call-section instead. */
-  .voice-call-overlay.expanded { display: none !important; }
-
-  /* The VoicePanel inside the desktop overlay must not run on mobile.
-     It stays mounted (WebRTC alive) but takes zero space and has no media access. */
-  .desktop-voice-panel {
-    position: absolute !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    pointer-events: none !important;
-  }
-
-  /* Collapsed bar still shows as a call-in-progress indicator */
-  .voice-call-overlay.collapsed {
-    display: flex;
-    height: 44px;
-  }
-
-  /* Mobile call tab — full screen */
   .mobile-call-section {
     display: flex;
     grid-column: 1;
     grid-row: 1;
-    height: 100%;
     width: 100%;
+    height: 100%;
     background: var(--surface-1);
   }
 
-  /* Hide call section when not on call tab */
-  .app-layout:not([data-mobile-tab="call"]) .mobile-call-section {
-    display: none;
-  }
-
-  /* When on call tab, hide all other sections */
-  .app-layout[data-mobile-tab="call"] .main-section { display: none; }
+  .app-layout:not([data-mobile-tab="call"]) .mobile-call-section { display: none; }
+  .app-layout[data-mobile-tab="call"] .main-section  { display: none; }
   .app-layout[data-mobile-tab="call"] .left-section  { display: none; }
   .app-layout[data-mobile-tab="call"] .right-section { display: none; }
 
-  /* Call tab button styling */
   .mobile-nav-btn.call-active {
     color: var(--status-online);
     border-top: 2px solid var(--status-online);
     background: var(--surface-2);
   }
-  .mobile-nav-btn.call-speaking {
-    animation: mobile-call-pulse 0.6s ease-in-out infinite alternate;
+
+  /* When on call tab: make the hidden WebRTC mount visible and full-screen */
+  .app-layout[data-mobile-tab="call"] .main-section {
+    display: flex !important;
+    flex-direction: column;
   }
-  @keyframes mobile-call-pulse {
-    from { color: var(--status-online); }
-    to   { color: #7ddc9a; }
+  .app-layout[data-mobile-tab="call"] .voice-hidden-mount {
+    position: static !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+  /* Hide routes content when viewing call on mobile */
+  .app-layout[data-mobile-tab="call"] .main-section > div:not(.voice-hidden-mount) {
+    display: none !important;
   }
 }

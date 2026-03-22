@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../features/auth/useAuth';
 import { useVoice } from '../../features/voice/VoiceContext';
@@ -24,7 +25,7 @@ interface VoicePanelProps {
 
 function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
   const { user } = useAuth();
-  const { setLocalIsSpeaking } = useVoice();
+  const { setLocalIsSpeaking, syncParticipants, syncControls, registerControls, unregisterControls } = useVoice();
   const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
@@ -38,7 +39,6 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
   const signalUnsubRef = useRef<(() => void) | null>(null);
   const voiceUnsubRef = useRef<(() => void) | null>(null);
   const presenceUnsubRef = useRef<(() => void) | null>(null);
-  // Cache user info to avoid a Firestore fetch on every incoming track event
   const userCache = useRef<Map<string, { username: string; avatarUrl: string }>>(new Map());
 
   const getUserInfo = useCallback(async (uid: string) => {
@@ -290,6 +290,15 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
     await doCleanup();
     onLeave();
   };
+
+  // ── Sync to VoiceContext so VoiceMiniPanel can read state ─────────────────
+  useEffect(() => { syncParticipants(participants); }, [participants, syncParticipants]);
+  useEffect(() => { syncControls({ isMuted, isCameraOn, isScreenSharing }); }, [isMuted, isCameraOn, isScreenSharing, syncControls]);
+  useEffect(() => {
+    registerControls({ toggleMute: handleToggleMute, toggleCamera: handleToggleCamera, toggleScreenShare: handleToggleScreenShare });
+    return () => unregisterControls();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMuted, isCameraOn, isScreenSharing]); // re-register when state changes so closures are fresh
 
   const handleContextMenu = (e: React.MouseEvent, participant: VoiceParticipant) => {
     e.preventDefault();
