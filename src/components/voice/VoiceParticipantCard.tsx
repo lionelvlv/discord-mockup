@@ -4,7 +4,7 @@ import { VoiceParticipant } from '../../types/voice';
 import Avatar from '../ui/Avatar';
 import './VoiceParticipantCard.css';
 
-interface Props { participant: VoiceParticipant; }
+interface Props { participant: VoiceParticipant; onSpeakingChange?: (speaking: boolean) => void; }
 
 // Web Audio API speaking detection — measures RMS of the audio signal every
 // animation frame. If the level exceeds SPEAK_THRESHOLD the participant is
@@ -92,7 +92,7 @@ function useSpeakingDetector(stream: MediaStream | undefined, enabled: boolean) 
   return isSpeaking;
 }
 
-function VoiceParticipantCard({ participant }: Props) {
+function VoiceParticipantCard({ participant, onSpeakingChange }: Props) {
   const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -107,6 +107,11 @@ function VoiceParticipantCard({ participant }: Props) {
     participant.stream,
     !participant.isMuted
   );
+
+  // Propagate speaking state to parent (e.g. VoicePanel → VoiceContext → collapsed bar)
+  useEffect(() => {
+    onSpeakingChange?.(isSpeaking);
+  }, [isSpeaking, onSpeakingChange]);
 
   useEffect(() => {
     const stream = participant.stream;
@@ -141,22 +146,40 @@ function VoiceParticipantCard({ participant }: Props) {
     (participant.isCameraOn || participant.isScreenSharing) &&
     participant.stream.getVideoTracks().some((t) => t.readyState === 'live' && t.enabled);
 
+  const handleFullscreen = () => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+  };
+
   return (
     <div className={`voice-participant-card panel ${isSpeaking ? 'speaking' : ''} ${participant.isMuted ? 'muted' : ''}`}>
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted={isOwn}
-        className="participant-video"
-        style={{ display: hasLiveVideo ? 'block' : 'none' }}
-      />
-      <div
-        className="participant-avatar"
-        style={{ display: hasLiveVideo ? 'none' : 'flex' }}
-      >
-        <Avatar src={participant.avatarUrl} size={64} />
+      <div className="participant-media-wrap">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted={isOwn}
+          className="participant-video"
+          style={{ display: hasLiveVideo ? 'block' : 'none' }}
+        />
+        {hasLiveVideo && (
+          <button
+            className="participant-fullscreen-btn button-95"
+            onClick={handleFullscreen}
+            title="Full screen"
+          >⛶</button>
+        )}
+        <div
+          className="participant-avatar"
+          style={{ display: hasLiveVideo ? 'none' : 'flex' }}
+        >
+          <Avatar src={participant.avatarUrl} size={64} />
+        </div>
       </div>
+
+      </div>{/* end participant-media-wrap */}
 
       {!isOwn && <audio ref={audioRef} autoPlay />}
 

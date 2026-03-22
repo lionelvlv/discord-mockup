@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../features/auth/useAuth';
+import { useVoice } from '../../features/voice/VoiceContext';
 import {
   joinVoiceChannel,
   subscribeToSignals,
@@ -24,6 +24,7 @@ interface VoicePanelProps {
 
 function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
   const { user } = useAuth();
+  const { setLocalIsSpeaking } = useVoice();
   const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
@@ -310,7 +311,10 @@ function VoicePanel({ channelId, channelName, onLeave }: VoicePanelProps) {
       <div className="participants-grid">
         {participants.map((p) => (
           <div key={p.userId} onContextMenu={(e) => handleContextMenu(e, p)}>
-            <VoiceParticipantCard participant={p} />
+            <VoiceParticipantCard
+              participant={p}
+              onSpeakingChange={p.userId === user?.id ? setLocalIsSpeaking : undefined}
+            />
           </div>
         ))}
       </div>

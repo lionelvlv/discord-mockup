@@ -111,32 +111,28 @@ export class WebRTCManager {
   async startScreenShare(): Promise<void> {
     this.screenStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
-      audio: true  // Captures system/tab audio when the browser & OS support it
+      audio: true  // captured locally so user hears tab audio; NOT forwarded as second track
     });
-    const screenTracks = this.screenStream.getTracks(); // video + optional audio
+
+    const videoTrack = this.screenStream.getVideoTracks()[0];
+    if (!videoTrack) return;
 
     this.peerConnections.forEach((pc) => {
-      screenTracks.forEach((track) => {
-        if (track.kind === 'video') {
-          // Replace existing video sender (avoids renegotiation if possible)
-          const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
-          if (sender) {
-            sender.replaceTrack(track);
-          } else {
-            pc.addTrack(track, this.screenStream!);
-          }
-        } else if (track.kind === 'audio') {
-          // Send screen audio as a second audio track (separate from mic)
-          const hasScreenAudio = pc.getSenders().some(
-            (s) => s.track && this.screenStream!.getAudioTracks().includes(s.track)
-          );
-          if (!hasScreenAudio) pc.addTrack(track, this.screenStream!);
-        }
-      });
+      const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
+      if (sender) {
+        // replaceTrack keeps the existing stream association — remote keeps audio ✓
+        sender.replaceTrack(videoTrack);
+      } else {
+        // IMPORTANT: associate with localStream, NOT screenStream.
+        // If we pass screenStream here the remote's ontrack fires with a stream
+        // that has NO audio tracks, so their audioRef goes silent. Passing
+        // localStream means the remote's video track arrives in the same stream
+        // as the audio track, so audio is preserved.
+        pc.addTrack(videoTrack, this.localStream!);
+      }
     });
 
-    // When the user clicks "Stop sharing" in the browser UI, clean up
-    this.screenStream.getVideoTracks()[0].onended = () => this.stopScreenShare();
+    videoTrack.onended = () => this.stopScreenShare();
   }
 
   async stopScreenShare(): Promise<void> {
@@ -191,11 +187,13 @@ export class WebRTCManager {
     const polarity = this.isPolite(remoteUserId) ? 'polite' : 'impolite';
     console.log(`[RTC] Created peer connection with ${remoteUserId} (we are ${polarity})`);
 
-    // Add all local tracks upfront so the remote peer receives our audio/video
+    // Add all local mic/camera tracks
     const localTracks = this.localStream?.getTracks() ?? [];
     console.log(`[RTC] Adding ${localTracks.length} local track(s) to connection with ${remoteUserId}`);
     localTracks.forEach((t) => pc.addTrack(t, this.localStream!));
-    this.screenStream?.getTracks().forEach((t) => pc.addTrack(t, this.screenStream!));
+    // Add screen video track if active — associate with localStream (not screenStream!)
+    // so the remote receives it in the same stream as the audio track.
+    this.screenStream?.getVideoTracks().forEach((t) => pc.addTrack(t, this.localStream!));
 
     // Surface incoming tracks to the UI.
     // Fire onRemoteStream for every individual track event so callers always

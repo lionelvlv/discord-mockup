@@ -1,88 +1,146 @@
+/* ── Wrapper ──────────────────────────────────────────────────────────────── */
 .gif-picker {
   position: absolute;
   bottom: calc(100% + 6px);
   left: 0;
-  width: 360px;
-  max-width: calc(100vw - 16px);
-  max-height: 420px;
+  width: 380px;
+  max-width: calc(100vw - 20px);
+  max-height: 500px;
   display: flex;
   flex-direction: column;
   z-index: 200;
   background: var(--surface-1);
   border: 2px outset var(--border-light);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.4);
+  overflow: hidden;
 }
 
-.gif-picker-header {
+/* ── Win98 title bar ──────────────────────────────────────────────────────── */
+.gif-picker-titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: var(--win98-blue-dark);
-  color: #fff;
+  padding: 3px 6px;
+  background: linear-gradient(to right, #000080, #1084d0);
   flex-shrink: 0;
+  user-select: none;
 }
 
 .gif-picker-title {
+  font-family: 'Press Start 2P', 'MS Sans Serif', monospace;
   font-size: 7px;
-  letter-spacing: 1px;
   color: #fff;
+  letter-spacing: 1px;
 }
 
 .gif-picker-close {
-  width: 20px;
-  height: 20px;
-  font-size: 14px;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  font-weight: bold;
   line-height: 1;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-}
-
-.gif-search-row {
-  padding: 8px;
-  border-bottom: 1px solid var(--border-dark);
   flex-shrink: 0;
 }
 
-.gif-search-input {
+/* ── Search row ───────────────────────────────────────────────────────────── */
+.gif-picker-search-row {
+  padding: 6px 8px 4px;
+  border-bottom: 2px inset var(--border-dark);
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+
+.gif-picker-search {
   width: 100%;
-  padding: 6px 8px;
+  padding: 4px 8px;
   font-size: 11px;
 }
 
-.gif-error {
-  padding: 12px;
-  font-size: 10px;
-  color: #c00;
-  text-align: center;
+/* ── Category quick-picks ─────────────────────────────────────────────────── */
+.gif-category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 2px inset var(--border-dark);
+  flex-shrink: 0;
+  background: var(--surface-2);
+  max-height: 72px;
+  overflow-y: auto;
 }
 
+.gif-category-btn {
+  font-size: 9px;
+  padding: 3px 6px;
+  white-space: nowrap;
+  min-height: 22px;
+}
+
+.gif-category-btn.active {
+  border-style: inset;
+  background: var(--surface-4);
+  font-weight: bold;
+}
+
+/* ── Active label ─────────────────────────────────────────────────────────── */
+.gif-active-label {
+  padding: 3px 10px;
+  font-size: 9px;
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-dark);
+  flex-shrink: 0;
+  font-style: italic;
+}
+
+/* ── GIF grid ─────────────────────────────────────────────────────────────── */
 .gif-grid {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll; /* always show scrollbar — makes it clear there's more content */
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  padding: 6px;
-  -webkit-overflow-scrolling: touch;
+  gap: 5px;
+  padding: 8px;
+  background: var(--surface-3);
+  /* Win98 inset panel */
+  border: 2px inset var(--border-dark);
+  margin: 6px 8px 4px;
+  min-height: 160px;
 }
 
+.gif-error,
+.gif-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 20px 12px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.gif-error { color: #c00; }
+
+/* Each GIF cell */
 .gif-item {
-  border: none;
+  border: 2px outset var(--border-light);
   padding: 0;
   cursor: pointer;
   background: var(--surface-2);
-  aspect-ratio: 1;
   overflow: hidden;
-  border: 1px solid var(--border-dark);
-  transition: border-color 0.1s;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-style 0.05s;
 }
 
 .gif-item:hover {
-  border-color: var(--accent-primary);
+  border-style: inset;
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
   z-index: 1;
 }
 
@@ -93,40 +151,49 @@
   display: block;
 }
 
+/* Loading skeleton */
 .gif-skeleton {
-  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  border: 2px inset var(--border-dark);
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 50%,
+    var(--surface-2) 100%
+  );
   background-size: 200% 100%;
   animation: gif-shimmer 1.2s infinite;
-  aspect-ratio: 1;
 }
 
 @keyframes gif-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
 }
 
+/* ── Load more + attribution ──────────────────────────────────────────────── */
 .gif-load-more {
-  margin: 6px 8px 4px;
+  margin: 0 8px 4px;
   width: calc(100% - 16px);
-  padding: 6px;
+  padding: 5px;
   font-size: 10px;
   flex-shrink: 0;
 }
 
 .gif-attribution {
-  padding: 4px 8px;
+  padding: 4px 8px 6px;
   font-size: 8px;
   color: var(--text-muted);
   text-align: center;
   flex-shrink: 0;
   border-top: 1px solid var(--border-dark);
+  background: var(--surface-2);
 }
 
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .gif-picker {
     width: calc(100vw - 16px);
     left: 0;
-    right: 0;
     bottom: calc(100% + 4px);
   }
   .gif-grid {
