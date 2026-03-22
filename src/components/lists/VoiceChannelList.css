@@ -82,3 +82,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+@media (max-width: 768px) {
+  .voice-channel-list { width: 100%; }
+  .voice-channel-item { min-height: 44px; padding: 10px 12px; }
+  .list-header { font-size: 9px; padding: 10px 12px; min-height: 44px; }
+  .create-channel-btn { width: 36px; height: 36px; font-size: 18px; }
+}

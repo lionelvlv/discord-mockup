@@ -26,3 +26,13 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
+@media (max-width: 768px) {
+  .left-rail {
+    width: 100%;
+    height: 100%;
+  }
+  .rail-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

@@ -152,3 +152,10 @@
   background: var(--surface-3);
   transform: scale(1.1);
 }
+
+@media (max-width: 768px) {
+  .message-item { padding: 6px 8px; }
+  .message-bubble { font-size: 13px; line-height: 1.5; }
+  .message-actions { opacity: 1; } /* Always visible on touch, no hover */
+  .action-btn { min-width: 36px; min-height: 36px; }
+}

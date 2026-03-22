@@ -2,19 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { createChannel, updateChannel, deleteChannel } from '../../features/channels/api';
-import { subscribeToVoiceChannel } from '../../features/voice/api';
+import { subscribeToVoicePresence } from '../../features/voice/api';
 import { Channel } from '../../types/channel';
 import { User } from '../../types/user';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import './VoiceChannelList.css';
 
-const VoiceChannelList: React.FC = () => {
+interface VoiceChannelListProps {
+  onNavigate?: () => void;
+}
+
+const VoiceChannelList: React.FC<VoiceChannelListProps> = ({ onNavigate }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [voiceChannels, setVoiceChannels] = useState<Channel[]>([]);
+  // RTDB-sourced participant sets — updates instantly on hard disconnect (browser close, phone off).
+  // Firestore participants[] has no onDisconnect equivalent so stale counts linger until the next
+  // intentional leave. RTDB voicePresence/{channelId} is cleaned up server-side on disconnect.
   const [participantsByChannel, setParticipantsByChannel] = useState<Record<string, string[]>>({});
-  // Real-time user map so participant names are always fresh (handles deleted/renamed users)
   const [users, setUsers] = useState<Map<string, User>>(new Map());
   const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; channel: Channel } | null>(null);
@@ -27,7 +33,6 @@ const VoiceChannelList: React.FC = () => {
   // Real-time voice channels subscription
   useEffect(() => {
     console.log('[VoiceChannelList] Subscribing to voice channels');
-    // Filter client-side so legacy docs without isVoiceChannel field are handled correctly.
     const unsub = onSnapshot(collection(db, 'channels'), (snap) => {
       const channels = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as Channel))
@@ -39,7 +44,7 @@ const VoiceChannelList: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // Real-time users subscription (needed to display participant names)
+  // Real-time users subscription (for participant name display)
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
       const map = new Map<string, User>();
@@ -55,24 +60,22 @@ const VoiceChannelList: React.FC = () => {
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
-  // Subscribe to participant lists for each voice channel
+  // Subscribe to RTDB voicePresence for each channel.
+  // RTDB has server-side onDisconnect so the count drops the moment a tab closes or
+  // a phone loses connection — no stale counts from Firestore participants[].
   useEffect(() => {
     const unsubscribers: (() => void)[] = [];
 
     voiceChannels.forEach(channel => {
-      const unsubscribe = subscribeToVoiceChannel(channel.id, (participants) => {
-        console.log(`[VoiceChannelList] Channel ${channel.name} participants: ${participants.length}`);
-        setParticipantsByChannel(prev => ({
-          ...prev,
-          [channel.id]: participants
-        }));
+      const unsubscribe = subscribeToVoicePresence(channel.id, (connectedIds) => {
+        const ids = Array.from(connectedIds);
+        console.log(`[VoiceChannelList] Channel ${channel.name} participants: ${ids.length}`);
+        setParticipantsByChannel(prev => ({ ...prev, [channel.id]: ids }));
       });
       unsubscribers.push(unsubscribe);
     });
 
-    return () => {
-      unsubscribers.forEach(unsub => unsub());
-    };
+    return () => unsubscribers.forEach(unsub => unsub());
   }, [voiceChannels]);
 
   const getUserById = (userId: string): User | undefined => users.get(userId);
@@ -141,6 +144,7 @@ const VoiceChannelList: React.FC = () => {
 
   const handleJoinVoice = (channelId: string) => {
     navigate(`/app/voice/${channelId}`);
+    onNavigate?.();
   };
 
   const toggleExpanded = (channelId: string, e: React.MouseEvent) => {

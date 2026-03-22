@@ -31,3 +31,9 @@
   font-weight: bold;
   border: 1px solid var(--border-dark);
 }
+@media (max-width: 768px) {
+  .right-rail {
+    width: 100%;
+    height: 100%;
+  }
+}

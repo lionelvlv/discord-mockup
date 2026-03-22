@@ -20,6 +20,11 @@ body {
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
+  /* Prevent iOS rubber-band scroll on the shell */
+  overscroll-behavior: none;
+  /* Disable tap highlight flash on mobile */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Pixel-perfect text rendering */
@@ -31,28 +36,42 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Scrollbar styling - retro Windows 98 style */
-::-webkit-scrollbar {
-  width: 16px;
-  height: 16px;
+/* Scrollbar styling - retro Windows 98 style (desktop only) */
+@media (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--surface-2);
+    border: 2px solid var(--border-dark);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--surface-4);
+    border: 2px outset var(--border-light);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: var(--surface-2);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: var(--surface-2);
-  border: 2px solid var(--border-dark);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--surface-4);
-  border: 2px outset var(--border-light);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
-}
-
-::-webkit-scrollbar-corner {
-  background: var(--surface-2);
+/* Thinner scrollbars on touch screens */
+@media (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-dark);
+    border-radius: 2px;
+  }
 }
 
 /* Button reset */
@@ -62,6 +81,7 @@ button {
   cursor: pointer;
   font-family: inherit;
   font-size: inherit;
+  /* Minimum 44px touch target on mobile */
 }
 
 input, textarea {
@@ -81,4 +101,16 @@ a {
 ::selection {
   background: var(--win98-highlight);
   color: var(--win98-highlight-text);
+}
+
+/* ── iOS safe area (notch / home indicator) ──────────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Prevent content behind the notch on landscape */
+  .app-layout {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }

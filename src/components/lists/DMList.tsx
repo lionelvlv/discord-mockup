@@ -10,7 +10,11 @@ import Avatar from '../ui/Avatar';
 import PresenceDot from '../ui/PresenceDot';
 import './DMList.css';
 
-const DMList: React.FC = () => {
+interface DMListProps {
+  onNavigate?: () => void;
+}
+
+const DMList: React.FC<DMListProps> = ({ onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -106,7 +110,7 @@ const DMList: React.FC = () => {
             <div
               key={dm.id}
               className={`dm-item list-item-95 ${isDMActive(dm) ? 'selected' : ''} ${isDeleted ? 'dm-deleted' : ''}`}
-              onClick={() => !isDeleted && navigate(`/app/dm/${otherUser.id}`)}
+              onClick={() => { if (!isDeleted) { navigate(`/app/dm/${otherUser.id}`); onNavigate?.(); } }}
               onContextMenu={(e) => handleContextMenu(e, dm)}
               title={isDeleted ? 'This user has been deleted — right-click to close DM' : undefined}
             >

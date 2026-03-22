@@ -42,3 +42,8 @@
 .leave-btn:hover {
   background: #c82333;
 }
+
+@media (max-width: 768px) {
+  .voice-controls { padding: 10px; gap: 8px; }
+  .control-btn { min-width: 52px; min-height: 52px; font-size: 20px; }
+}

@@ -60,3 +60,8 @@
   background: var(--win98-highlight);
   color: var(--win98-highlight-text);
 }
+@media (max-width: 768px) {
+  .dm-list { width: 100%; }
+  .dm-item { min-height: 44px; padding: 10px 12px; }
+  .list-header { font-size: 9px; padding: 10px 12px; min-height: 44px; }
+}

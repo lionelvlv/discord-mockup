@@ -4,40 +4,44 @@
   --right-rail-width: 240px;
   --header-height: 48px;
   --user-panel-height: 52px;
+  --mobile-nav-height: 56px;
 
   /* Windows 98 colors */
   --surface-1: #c0c0c0;
   --surface-2: #dfdfdf;
   --surface-3: #ffffff;
-  
+  --surface-4: #a0a0a0;
+
+  --bg-desktop: #008080; /* Classic Win98 teal desktop */
+
   --border-light: #ffffff;
   --border-dark: #808080;
   --border-darker: #000000;
-  
+
   --text-primary: #000000;
   --text-secondary: #808080;
   --text-muted: #666666;
-  
+
   /* Windows 98 blue */
   --win98-blue-light: #0a246a;
   --win98-blue-dark: #000080;
   --win98-highlight: #000080;
   --win98-highlight-text: #ffffff;
-  
+
   /* Status colors */
   --status-online: #3ba55d;
   --status-idle: #faa81a;
   --status-offline: #747f8d;
-  
+
   /* Navy/Purple theme */
   --navy-dark: #2c2f33;
   --navy-light: #23272a;
   --accent-primary: #7289da;
-  
+
   /* Message colors */
   --msg-bg: #f0f0f0;
   --msg-hover: rgba(0, 0, 0, 0.04);
-  
+
   /* Shadows */
   --shadow-sm: 1px 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 2px 2px 4px rgba(0, 0, 0, 0.3);

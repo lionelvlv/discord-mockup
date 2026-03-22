@@ -27,3 +27,8 @@
   text-align: center;
   margin: 4px;
 }
+
+@media (max-width: 768px) {
+  .dm-page { height: 100dvh; }
+  .dm-content { flex: 1; min-height: 0; }
+}

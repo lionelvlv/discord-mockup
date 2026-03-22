@@ -32,6 +32,7 @@
 
 .login-container {
   width: 480px;
+  max-width: calc(100vw - 24px);
   z-index: 1;
   animation: slideIn 0.3s ease-out;
 }
@@ -137,26 +138,47 @@
   color: var(--text-muted);
 }
 
-.demo-accounts {
-  margin-top: 16px;
-  padding: 12px;
-  background: #fffef0;
-  border-radius: 0;
-}
 
-.demo-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 10px;
-}
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .login-page {
+    align-items: flex-start;
+    padding: 16px 12px;
+    overflow-y: auto;
+  }
 
-.demo-item {
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
-  line-height: 1.4;
-}
+  .login-container {
+    width: 100%;
+    max-width: 100%;
+  }
 
-.demo-item strong {
-  color: var(--navy-dark);
+  .login-content {
+    padding: 16px;
+  }
+
+  .logo {
+    font-size: 36px;
+  }
+
+  .login-header h1 {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .form-group input {
+    padding: 10px 8px;
+    font-size: 16px; /* Prevent iOS zoom on focus */
+    min-height: 44px;
+  }
+
+  .login-button {
+    min-height: 44px;
+    font-size: 12px;
+  }
+
+  .login-links {
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
 }

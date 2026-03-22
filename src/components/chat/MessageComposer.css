@@ -28,3 +28,12 @@
   font-size: 11px;
   white-space: nowrap;
 }
+
+@media (max-width: 768px) {
+  .message-composer { padding: 8px; }
+  .composer-input {
+    font-size: 16px; /* Prevent iOS auto-zoom on focus */
+    min-height: 44px;
+  }
+  .send-button { min-width: 44px; min-height: 44px; }
+}

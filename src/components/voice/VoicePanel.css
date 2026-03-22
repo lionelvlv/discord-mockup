@@ -36,3 +36,13 @@
   gap: 16px;
   align-content: start;
 }
+
+@media (max-width: 768px) {
+  .participants-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    padding: 8px;
+  }
+  .voice-header { padding: 10px 12px; }
+  .voice-channel-title { font-size: 13px; }
+}

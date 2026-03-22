@@ -84,21 +84,6 @@ const LoginPage: React.FC = () => {
             <span className="separator">|</span>
             <Link to="/signup" className="link-95">Create account</Link>
           </div>
-
-          <div className="demo-accounts panel-inset">
-            <div className="pixel-font" style={{ marginBottom: '8px', fontSize: '7px' }}>DEMO ACCOUNTS:</div>
-            <div className="demo-list">
-              <div className="demo-item">
-                <strong>RetroGamer42:</strong> retro@example.com / password123
-              </div>
-              <div className="demo-item">
-                <strong>VaporwaveFan:</strong> vapor@example.com / password123
-              </div>
-            </div>
-            <div style={{ marginTop: '8px', fontSize: '9px', color: 'var(--text-muted)' }}>
-              💡 Open two browser windows to chat between accounts
-            </div>
-          </div>
         </div>
       </div>
     </div>

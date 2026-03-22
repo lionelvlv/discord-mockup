@@ -7,7 +7,11 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import './ChannelList.css';
 
-const ChannelList: React.FC = () => {
+interface ChannelListProps {
+  onNavigate?: () => void;
+}
+
+const ChannelList: React.FC<ChannelListProps> = ({ onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -135,7 +139,7 @@ const ChannelList: React.FC = () => {
           <div
             key={channel.id}
             className={`channel-item list-item-95 ${isChannelActive(channel.id) ? 'selected' : ''}`}
-            onClick={() => navigate(`/app/channel/${channel.id}`)}
+            onClick={() => { navigate(`/app/channel/${channel.id}`); onNavigate?.(); }}
             onContextMenu={(e) => handleContextMenu(e, channel)}
           >
             <span className="channel-hash">#</span>

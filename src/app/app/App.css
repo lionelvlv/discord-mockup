@@ -1,8 +1,9 @@
+/* ── Desktop layout (3 columns) ─────────────────────────────────────────── */
 .app-layout {
   display: grid;
   grid-template-columns: var(--left-rail-width) 1fr var(--right-rail-width);
-  grid-template-rows: 1fr var(--user-panel-height);
-  height: 100vh;
+  grid-template-rows: 1fr;
+  height: 100dvh;
   width: 100vw;
   background: var(--surface-1);
   overflow: hidden;
@@ -10,27 +11,124 @@
 
 .left-section {
   grid-column: 1;
-  grid-row: 1 / 3;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   border-right: 2px solid var(--border-darker);
+  overflow: hidden;
 }
 
 .left-section > :first-child {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .main-section {
   grid-column: 2;
-  grid-row: 1 / 3;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .right-section {
   grid-column: 3;
-  grid-row: 1 / 3;
+  grid-row: 1;
   overflow: hidden;
+}
+
+/* ── Mobile layout (< 768px) ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr var(--mobile-nav-height, 52px);
+    position: relative;
+  }
+
+  /* All three panels stack on top of each other in the same cell.
+     Only the active one is visible — controlled via data-mobile-tab. */
+  .left-section,
+  .main-section,
+  .right-section {
+    grid-column: 1;
+    grid-row: 1;
+    border: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  /* Default: hide left + right, show main */
+  .left-section  { display: none; }
+  .right-section { display: none; }
+  .main-section  { display: flex; }
+
+  /* Tab switching via data attribute on .app-layout */
+  .app-layout[data-mobile-tab="channels"] .left-section  { display: flex; }
+  .app-layout[data-mobile-tab="channels"] .main-section  { display: none; }
+  .app-layout[data-mobile-tab="channels"] .right-section { display: none; }
+
+  .app-layout[data-mobile-tab="members"] .right-section { display: flex; }
+  .app-layout[data-mobile-tab="members"] .main-section  { display: none; }
+  .app-layout[data-mobile-tab="members"] .left-section  { display: none; }
+
+  /* Left rail fills full height on mobile */
+  .left-section {
+    height: 100%;
+    width: 100%;
+  }
+  .right-section {
+    height: 100%;
+    width: 100%;
+  }
+}
+
+/* ── Mobile bottom navigation bar ───────────────────────────────────────── */
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+    grid-column: 1;
+    grid-row: 2;
+    background: var(--surface-1);
+    border-top: 2px solid var(--border-darker);
+    z-index: 100;
+  }
+
+  .mobile-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 0;
+    font-size: 18px;
+    border-right: 1px solid var(--border-dark);
+    background: var(--surface-1);
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+    min-height: 44px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.1s;
+  }
+  .mobile-nav-btn:last-child { border-right: none; }
+
+  .mobile-nav-btn.active {
+    background: var(--surface-2);
+    color: var(--text-primary);
+    border-top: 2px solid var(--accent-primary);
+  }
+
+  .mobile-nav-label {
+    font-size: 7px;
+    font-family: 'MS Sans Serif', Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 }

@@ -226,16 +226,15 @@ export class WebRTCManager {
       console.log(`[RTC] Signaling state with ${remoteUserId}: ${pc.signalingState}`);
     };
 
-    // Perfect Negotiation: only the IMPOLITE peer sends the initial offer.
-    // The polite peer waits for an offer and always responds with an answer.
+    // Perfect Negotiation: BOTH peers respond to onnegotiationneeded by sending offers.
+    // The polite/impolite distinction only matters when BOTH peers send offers
+    // simultaneously (collision) — handled in handleOffer below.
+    // Previously the polite peer skipped this entirely, which meant camera/screenshare
+    // toggled by the polite peer was never sent to the remote side.
     pc.onnegotiationneeded = async () => {
-      if (this.isPolite(remoteUserId)) {
-        console.log(`[RTC] onnegotiationneeded with ${remoteUserId} — we are polite, waiting for their offer`);
-        return;
-      }
       try {
         this.makingOffer.set(remoteUserId, true);
-        console.log(`[RTC] Creating offer → ${remoteUserId}`);
+        console.log(`[RTC] onnegotiationneeded with ${remoteUserId} — creating offer (${this.isPolite(remoteUserId) ? 'polite' : 'impolite'})`);
         await pc.setLocalDescription();
         await sendSignal(this.userId, remoteUserId, this.channelId, {
           type: 'offer',
