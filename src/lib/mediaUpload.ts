@@ -2,7 +2,7 @@ import { Attachment } from '../types/message';
 
 // ── Security constants ────────────────────────────────────────────────────────
 
-export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+export const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB
 export const MAX_FILES_PER_MESSAGE = 4;
 
 // Strict client-side allowlist. Cloudinary's upload preset is the server gate.
@@ -33,7 +33,7 @@ export function getAttachmentKind(mimeType: string): Attachment['kind'] {
 
 export function validateFile(file: File): string | null {
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return `${file.name}: exceeds 25 MB limit (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+    return `${file.name}: exceeds 8 MB limit (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
   }
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
     return `${file.name}: file type "${file.type}" is not allowed`;
@@ -124,6 +124,10 @@ export async function uploadFile(
 const YOUTUBE_RE = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/;
 const VIMEO_RE   = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
 const IMAGE_URL_RE = /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|avif)(\?.*)?$/i;
+// Giphy media URLs (e.g. https://media.giphy.com/media/xxx/giphy.gif)
+const GIPHY_URL_RE  = /^https?:\/\/media\d*\.giphy\.com\//i;
+// Tenor URLs (e.g. https://media.tenor.com/xxx/xxx.gif)
+const TENOR_URL_RE  = /^https?:\/\/media\.tenor\.com\//i;
 
 export interface EmbedInfo {
   kind: 'youtube' | 'vimeo' | 'image_url';
@@ -152,7 +156,7 @@ export function detectEmbeds(text: string): EmbedInfo[] {
       continue;
     }
 
-    if (IMAGE_URL_RE.test(token)) {
+    if (IMAGE_URL_RE.test(token) || GIPHY_URL_RE.test(token) || TENOR_URL_RE.test(token)) {
       embeds.push({ kind: 'image_url', embedUrl: token, originalUrl: token });
     }
   }

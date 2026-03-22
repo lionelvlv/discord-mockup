@@ -229,9 +229,10 @@ const EmbedRenderer: React.FC<{ embed: EmbedInfo }> = ({ embed }) => {
     );
   }
 
-  // YouTube / Vimeo — these are explicitly trusted domains so no sandbox needed.
-  // sandbox without allow-same-origin breaks YouTube's player (cache storage access).
-  // allowFullScreen is a separate iframe attribute, not a sandbox token.
+  // YouTube / Vimeo — explicitly trusted domains, no sandbox needed.
+  // Do NOT set referrerPolicy="no-referrer" — YouTube validates the embed origin
+  // via the Referer header; blocking it causes error 153 / identity.missing.referrer.
+  // fullscreen is handled via the allow attribute; allowFullScreen is redundant.
   return (
     <div className="embed-video-wrap">
       <iframe
@@ -240,9 +241,7 @@ const EmbedRenderer: React.FC<{ embed: EmbedInfo }> = ({ embed }) => {
         title={embed.kind === 'youtube' ? 'YouTube video' : 'Vimeo video'}
         frameBorder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-        allowFullScreen
         loading="lazy"
-        referrerPolicy="no-referrer"
       />
       <a
         href={embed.originalUrl}

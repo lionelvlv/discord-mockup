@@ -170,3 +170,9 @@
   .send-button { min-width: 44px; min-height: 44px; }
   .attach-button { min-width: 44px; min-height: 44px; font-size: 20px; }
 }
+
+/* GIF button active state */
+.attach-button.active {
+  background: var(--surface-4);
+  border-style: inset;
+}

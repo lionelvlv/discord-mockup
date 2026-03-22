@@ -7,6 +7,7 @@ import {
   MAX_FILES_PER_MESSAGE,
 } from '../../lib/mediaUpload';
 import { Attachment } from '../../types/message';
+import GifPicker from './GifPicker';
 import './MessageComposer.css';
 
 interface PendingFile {
@@ -30,6 +31,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -117,17 +119,23 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
       .filter(f => f.uploaded)
       .map(f => f.uploaded!);
 
-    // Require either text or at least one successfully uploaded file
     if (!trimmed && readyAttachments.length === 0) return;
-    if (uploading) return; // wait for uploads to finish
+    if (uploading) return;
 
     onSend(trimmed, readyAttachments.length > 0 ? readyAttachments : undefined);
     setMessage('');
-    // Revoke preview URLs
     pendingFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
     setPendingFiles([]);
+    setShowGifPicker(false);
     if (user) clearTyping(user.id, channelId, dmId);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+  };
+
+  // When a GIF is selected, send it immediately as the message content.
+  // The URL gets picked up by detectEmbeds in MessageItem and rendered inline.
+  const handleGifSelect = (gifUrl: string) => {
+    onSend(gifUrl);
+    setShowGifPicker(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -168,7 +176,15 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
+      style={{ position: 'relative' }}
     >
+      {/* GIF picker popover */}
+      {showGifPicker && (
+        <GifPicker
+          onSelect={handleGifSelect}
+          onClose={() => setShowGifPicker(false)}
+        />
+      )}
       {/* File previews */}
       {pendingFiles.length > 0 && (
         <div className="composer-attachments">
@@ -208,10 +224,19 @@ const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, channelId, dm
           type="button"
           className="attach-button button-95"
           onClick={() => fileInputRef.current?.click()}
-          title="Attach files (images, video, audio, PDF — max 25 MB each)"
+          title="Attach files (images, video, audio, PDF — max 8 MB each)"
           disabled={pendingFiles.filter(f => !f.error).length >= MAX_FILES_PER_MESSAGE}
         >
           📎
+        </button>
+
+        <button
+          type="button"
+          className={`attach-button button-95 ${showGifPicker ? 'active' : ''}`}
+          onClick={() => setShowGifPicker(v => !v)}
+          title="Send a GIF"
+        >
+          GIF
         </button>
 
         <textarea

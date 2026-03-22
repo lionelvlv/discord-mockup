@@ -1,0 +1,135 @@
+.gif-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: 360px;
+  max-width: calc(100vw - 16px);
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  background: var(--surface-1);
+  border: 2px outset var(--border-light);
+  box-shadow: var(--shadow-lg);
+}
+
+.gif-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--win98-blue-dark);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.gif-picker-title {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.gif-picker-close {
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.gif-search-row {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-dark);
+  flex-shrink: 0;
+}
+
+.gif-search-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.gif-error {
+  padding: 12px;
+  font-size: 10px;
+  color: #c00;
+  text-align: center;
+}
+
+.gif-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gif-item {
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--surface-2);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--border-dark);
+  transition: border-color 0.1s;
+}
+
+.gif-item:hover {
+  border-color: var(--accent-primary);
+  z-index: 1;
+}
+
+.gif-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gif-skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: gif-shimmer 1.2s infinite;
+  aspect-ratio: 1;
+}
+
+@keyframes gif-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.gif-load-more {
+  margin: 6px 8px 4px;
+  width: calc(100% - 16px);
+  padding: 6px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.gif-attribution {
+  padding: 4px 8px;
+  font-size: 8px;
+  color: var(--text-muted);
+  text-align: center;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-dark);
+}
+
+@media (max-width: 480px) {
+  .gif-picker {
+    width: calc(100vw - 16px);
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 4px);
+  }
+  .gif-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
