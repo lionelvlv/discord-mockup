@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { VoiceProvider, useVoice } from '../../features/voice/VoiceContext';
 import LeftRail from '../../components/layout/LeftRail';
@@ -22,53 +22,69 @@ const AppInner: React.FC = () => {
 
   if (!user) return <Navigate to="/login" />;
 
-  // When a voice channel is joined and expanded, it takes over the full main area.
-  // When minimised (isExpanded=false), text/DM routes render normally and
-  // VoiceMiniPanel appears at the bottom of the left rail.
-  const showFullscreenCall = !!activeVoice && isExpanded;
+  // Navigating to any text channel/DM/settings minimises the full-screen call.
+  // Mobile: also switch to chat tab so the call doesn't stay blocking.
+  const handleNavigate = () => {
+    if (activeVoice && isExpanded) setExpanded(false);
+    setMobileTab('chat');
+  };
 
-  const handleNavigate = () => setMobileTab('chat');
-  const handleJoinVoice = () => setMobileTab('call');
+  const handleJoinVoice = () => {
+    setExpanded(true);
+    setMobileTab('call');
+  };
+
+  // VoicePanel mode:
+  //  "fullscreen" — desktop expanded / mobile call tab → position:absolute fills main area
+  //  "mini"       — desktop minimised → 0×0 hidden, WebRTC/audio still running
+  const isCallTab = mobileTab === 'call';
+  const voiceMode = !activeVoice
+    ? null
+    : (isExpanded || isCallTab) ? 'fullscreen' : 'mini';
 
   return (
     <div className="app-layout" data-mobile-tab={mobileTab}>
-      {/* ── Left section: channels + mini voice panel + user ───────────────── */}
+
+      {/* ── Left rail ──────────────────────────────────────────────────────── */}
       <div className="left-section">
         <LeftRail onNavigate={handleNavigate} />
-        {/* Mini panel shows when in a call but not viewing it full-screen */}
-        {activeVoice && !isExpanded && <VoiceMiniPanel />}
+        {activeVoice && voiceMode === 'mini' && <VoiceMiniPanel />}
         <UserPanel user={user} />
       </div>
 
-      {/* ── Main section ────────────────────────────────────────────────────── */}
+      {/* ── Main section ───────────────────────────────────────────────────── */}
       <div className="main-section">
-        {/* Full-screen call — hides text content entirely */}
-        {showFullscreenCall && (
-          <div className="voice-fullscreen">
-            {/* Title bar */}
-            <div className="voice-fullscreen-header panel-outset">
-              <span className="pixel-font" style={{ fontSize: '8px' }}>
-                🔊 {activeVoice.channelName.toUpperCase()}
-              </span>
-              <button
-                className="button-95 voice-minimize-btn"
-                onClick={() => setExpanded(false)}
-                title="Minimise — return to chat"
-              >─</button>
-            </div>
-            {/* VoicePanel fills the rest */}
-            <div className="voice-fullscreen-body">
+
+        {/* Single VoicePanel — always mounted while in a call.
+            CSS class controls whether it's fullscreen or hidden (0×0).
+            Never unmount it — that would leave the channel. */}
+        {activeVoice && (
+          <div className={`voice-panel-mount voice-panel-mount--${voiceMode}`}>
+            {/* Titlebar: shown in fullscreen mode, or on mobile call tab (mini mode) */}
+            {(voiceMode === 'fullscreen' || (voiceMode === 'mini' && isCallTab)) && (
+              <div className="voice-fullscreen-header panel-outset">
+                <span className="pixel-font" style={{ fontSize: '8px' }}>
+                  🔊 {activeVoice.channelName.toUpperCase()}
+                </span>
+                <button
+                  className="button-95 voice-minimize-btn"
+                  onClick={() => { setExpanded(false); setMobileTab('chat'); }}
+                  title="Return to chat"
+                >─</button>
+              </div>
+            )}
+            <div className="voice-panel-mount__body">
               <VoicePanel
                 channelId={activeVoice.channelId}
                 channelName={activeVoice.channelName}
-                onLeave={leaveVoice}
+                onLeave={() => { leaveVoice(); setMobileTab('chat'); }}
               />
             </div>
           </div>
         )}
 
-        {/* Text/DM/Settings routes — shown when not full-screen */}
-        <div style={{ display: showFullscreenCall ? 'none' : 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        {/* Text/DM/Settings routes — always mounted, hidden behind fullscreen call */}
+        <div className="main-routes" style={{ display: voiceMode === 'fullscreen' ? 'none' : 'flex' }}>
           <Routes>
             <Route path="/" element={<Navigate to="/app/channel/general" />} />
             <Route path="/channel/:channelId" element={<ChannelPage />} />
@@ -77,48 +93,35 @@ const AppInner: React.FC = () => {
             <Route path="/settings/profile" element={<ProfileSettings />} />
           </Routes>
         </div>
-
-        {/* When VoicePanel is minimised it must stay mounted so WebRTC keeps running.
-            Render it hidden (zero size, pointer-events off) so audio elements still play. */}
-        {activeVoice && !isExpanded && (
-          <div className="voice-hidden-mount" aria-hidden="true">
-            <VoicePanel
-              channelId={activeVoice.channelId}
-              channelName={activeVoice.channelName}
-              onLeave={leaveVoice}
-            />
-          </div>
-        )}
       </div>
 
-      {/* ── Right section ────────────────────────────────────────────────────── */}
+      {/* ── Right rail ─────────────────────────────────────────────────────── */}
       <div className="right-section">
         <RightRail />
       </div>
 
-      {/* ── Mobile call tab — full screen without a second WebRTC instance ──── */}
-      {activeVoice && (
-        <div className="mobile-call-section">
-          {/* Show the full-screen call by toggling the hidden mount to be visible.
-              No second VoicePanel — the hidden-mount instance provides all WebRTC
-              and audio. On mobile the call tab just makes it visible. */}
-        </div>
-      )}
-
-      {/* ── Mobile bottom navigation ────────────────────────────────────────── */}
+      {/* ── Mobile bottom nav ──────────────────────────────────────────────── */}
       <nav className="mobile-nav" aria-label="App navigation">
-        <button className={`mobile-nav-btn ${mobileTab === 'channels' ? 'active' : ''}`} onClick={() => setMobileTab('channels')} aria-label="Channels">
+        <button className={`mobile-nav-btn ${mobileTab === 'channels' ? 'active' : ''}`}
+          onClick={() => { setMobileTab('channels'); if (activeVoice && isExpanded) setExpanded(false); }}
+          aria-label="Channels">
           <span>💬</span><span className="mobile-nav-label">Channels</span>
         </button>
-        <button className={`mobile-nav-btn ${mobileTab === 'chat' ? 'active' : ''}`} onClick={() => setMobileTab('chat')} aria-label="Chat">
+        <button className={`mobile-nav-btn ${mobileTab === 'chat' ? 'active' : ''}`}
+          onClick={() => { setMobileTab('chat'); if (activeVoice && isExpanded) setExpanded(false); }}
+          aria-label="Chat">
           <span>🏠</span><span className="mobile-nav-label">Chat</span>
         </button>
         {activeVoice && (
-          <button className={`mobile-nav-btn call-active ${mobileTab === 'call' ? 'active' : ''}`} onClick={() => setMobileTab('call')} aria-label="Voice call">
+          <button className={`mobile-nav-btn call-active ${mobileTab === 'call' ? 'active' : ''}`}
+            onClick={() => setMobileTab('call')}
+            aria-label="Voice call">
             <span>📞</span><span className="mobile-nav-label">Call</span>
           </button>
         )}
-        <button className={`mobile-nav-btn ${mobileTab === 'members' ? 'active' : ''}`} onClick={() => setMobileTab('members')} aria-label="Members">
+        <button className={`mobile-nav-btn ${mobileTab === 'members' ? 'active' : ''}`}
+          onClick={() => { setMobileTab('members'); if (activeVoice && isExpanded) setExpanded(false); }}
+          aria-label="Members">
           <span>👥</span><span className="mobile-nav-label">Members</span>
         </button>
       </nav>

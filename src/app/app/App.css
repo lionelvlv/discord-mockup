@@ -133,17 +133,53 @@
   }
 }
 
-/* ── Voice call — full screen mode ─────────────────────────────────────── */
-.voice-fullscreen {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
+/* ── Voice panel mount — single instance, CSS controls mode ─────────────── */
+
+/* Base: always flex-column so header + body stack */
+.voice-panel-mount {
   display: flex;
   flex-direction: column;
-  background: var(--surface-1);
   overflow: hidden;
 }
 
+/* fullscreen: covers the entire main-section */
+.voice-panel-mount--fullscreen {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: var(--surface-1);
+}
+
+/* mini: zero-size hidden mount — WebRTC and audio elements stay alive */
+.voice-panel-mount--mini {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* The body inside the mount fills remaining space after the header */
+.voice-panel-mount__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* main-section needs relative positioning for the absolute fullscreen mount */
+.main-section { position: relative; }
+
+/* Routes wrapper fills available space */
+.main-routes {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* Shared fullscreen header (titlebar) */
 .voice-fullscreen-header {
   display: flex;
   align-items: center;
@@ -164,56 +200,14 @@
   line-height: 1;
 }
 
-.voice-fullscreen-body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* Hidden mount — keeps WebRTC + audio alive while viewing text channels.
-   Zero size, no pointer events, but the DOM is present so audio plays. */
-.voice-hidden-mount {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0;
-}
-
-/* main-section needs position:relative so fullscreen overlay works */
-.main-section { position: relative; }
-
-/* ── Mobile ─────────────────────────────────────────────────────────────── */
-.mobile-call-section { display: none; }
-
+/* ── Mobile call tab — show voice panel fullscreen ───────────────────────── */
 @media (max-width: 768px) {
-  .mobile-call-section {
-    display: flex;
-    grid-column: 1;
-    grid-row: 1;
-    width: 100%;
-    height: 100%;
-    background: var(--surface-1);
-  }
-
-  .app-layout:not([data-mobile-tab="call"]) .mobile-call-section { display: none; }
-  .app-layout[data-mobile-tab="call"] .main-section  { display: none; }
+  /* When on call tab, hide rails — main-section stays visible (it holds the voice panel) */
   .app-layout[data-mobile-tab="call"] .left-section  { display: none; }
   .app-layout[data-mobile-tab="call"] .right-section { display: none; }
 
-  .mobile-nav-btn.call-active {
-    color: var(--status-online);
-    border-top: 2px solid var(--status-online);
-    background: var(--surface-2);
-  }
-
-  /* When on call tab: make the hidden WebRTC mount visible and full-screen */
-  .app-layout[data-mobile-tab="call"] .main-section {
-    display: flex !important;
-    flex-direction: column;
-  }
-  .app-layout[data-mobile-tab="call"] .voice-hidden-mount {
+  /* The mini mount must fill screen on mobile call tab */
+  .app-layout[data-mobile-tab="call"] .voice-panel-mount--mini {
     position: static !important;
     width: 100% !important;
     height: 100% !important;
@@ -221,11 +215,17 @@
     pointer-events: auto !important;
     opacity: 1 !important;
     flex: 1;
-    min-height: 0;
-    display: flex;
+    display: flex !important;
+    flex-direction: column;
   }
-  /* Hide routes content when viewing call on mobile */
-  .app-layout[data-mobile-tab="call"] .main-section > div:not(.voice-hidden-mount) {
-    display: none !important;
+
+  /* Hide the routes when call tab is active */
+  .app-layout[data-mobile-tab="call"] .main-routes { display: none !important; }
+
+  /* Call tab button */
+  .mobile-nav-btn.call-active {
+    color: var(--status-online);
+    border-top: 2px solid var(--status-online);
+    background: var(--surface-2);
   }
 }
