@@ -1,15 +1,25 @@
+/**
+ * GlobalUnreadWatcher — subscribes to recent messages for every channel + DM.
+ * Drives unread badges in the sidebar and plays mention sounds.
+ *
+ * KEY DESIGN DECISIONS:
+ * - Uses orderBy(timestamp DESC) + limit(50) to always get the NEWEST 50 messages
+ * - Tracks new messages by comparing max timestamp, not array length
+ * - Active channel: save lastRead timestamp → watcher recomputes with 0 unread
+ * - markRead() in the store zeroes counts immediately for instant UI response
+ */
 import { useEffect, useRef } from 'react';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Message } from '../../types/message';
-import { updateUnread } from '../../features/chat/unreadStore';
+import { updateUnread, markRead } from '../../features/chat/unreadStore';
 import { soundManager } from '../../lib/sounds';
 import { useAuth } from '../../features/auth/useAuth';
 
 let _activeId: string | null = null;
 export function setGlobalActiveId(id: string | null) {
-  console.log(`[Unread] setGlobalActiveId: ${id}`);
   _activeId = id;
+  if (id) saveLastRead(id); // save immediately when navigating to channel
 }
 
 export function saveLastRead(id: string) {
@@ -26,121 +36,107 @@ interface WatcherProps {
 
 export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
   const { user } = useAuth();
+  const channelsRef = useRef(channels);
+  const dmsRef      = useRef(dms);
   const userRef     = useRef(user);
-  userRef.current   = user;
+  channelsRef.current = channels;
+  dmsRef.current      = dms;
+  userRef.current     = user;
 
-  const subs        = useRef<Map<string, () => void>>(new Map());
-  const initSet     = useRef<Set<string>>(new Set());
-  const prevCounts  = useRef<Record<string, number>>({});
+  const subs       = useRef<Map<string, () => void>>(new Map());
+  const initSet    = useRef<Set<string>>(new Set());
+  const maxTsCache = useRef<Record<string, number>>({});  // max timestamp seen per id
 
-  const processSnapshot = (id: string, isDM: boolean, label: string, msgs: Message[]) => {
+  const processSnapshot = (id: string, isDM: boolean, msgs: Message[]) => {
     const cur = userRef.current;
-    if (!cur) { console.log(`[Unread] processSnapshot ${label}: no user`); return; }
+    if (!cur) return;
 
+    // msgs are DESC-ordered (newest first), so msgs[0] is the latest
+    const latestTs = msgs[0]?.timestamp ?? 0;
+    const prevMaxTs = maxTsCache.current[id] ?? 0;
     const isInit = !initSet.current.has(id);
-    const prev   = prevCounts.current[id] ?? msgs.length;
     initSet.current.add(id);
-    prevCounts.current[id] = msgs.length;
 
-    console.log(`[Unread] snapshot ${label} id=${id} isDM=${isDM} isInit=${isInit} msgs=${msgs.length} prev=${prev} activeId=${_activeId}`);
-
+    // Active channel: mark read immediately and clear badge
     if (id === _activeId) {
       saveLastRead(id);
-      updateUnread(id, msgs, cur.id, cur.username ?? '', Date.now(), isDM);
+      maxTsCache.current[id] = latestTs;
+      markRead(id); // instant badge clear
       return;
     }
 
     const lastRead = getLastRead(id);
-    let hasNewMention = false;
 
-    if (!isInit && msgs.length > prev) {
-      const newMsgs = msgs.slice(prev);
-      console.log(`[Unread] ${label}: ${newMsgs.length} new msgs, checking for mentions (isDM=${isDM})`);
-      newMsgs.forEach(m => {
-        console.log(`[Unread]   msg from=${m.senderId} cur=${cur.id} deleted=${m.deleted} ts=${m.timestamp} lastRead=${lastRead} content="${m.content}"`);
-      });
-      hasNewMention = newMsgs.some(m =>
+    // Detect genuinely new messages (not first load) for sound
+    if (!isInit && latestTs > prevMaxTs && latestTs > lastRead) {
+      const newMsgs = msgs.filter(m => m.timestamp > prevMaxTs && m.timestamp > lastRead);
+      const hasMention = newMsgs.some(m =>
         m.senderId !== cur.id &&
         !m.deleted &&
-        m.timestamp > lastRead &&
         (isDM || m.content?.toLowerCase().includes(`@${cur.username?.toLowerCase()}`))
       );
-      console.log(`[Unread] ${label}: hasNewMention=${hasNewMention}`);
+      if (hasMention) soundManager.play('mention', 0.8);
     }
 
+    maxTsCache.current[id] = Math.max(prevMaxTs, latestTs);
     updateUnread(id, msgs, cur.id, cur.username ?? '', lastRead, isDM);
-    if (hasNewMention) {
-      console.log(`[Unread] 🔔 Playing mention sound for ${label}`);
-      soundManager.play('mention', 0.8);
-    }
   };
 
-  // Watch one channel/DM — skips if already subscribed
-  const subscribeId = (id: string, label: string, firestoreQuery: any, isDM: boolean) => {
-    if (subs.current.has(id)) {
-      console.log(`[Unread] already subscribed to ${label} (${id})`);
-      return;
-    }
-    console.log(`[Unread] subscribing to ${label} (${id}) isDM=${isDM}`);
+  const subscribeId = (id: string, firestoreQuery: any, isDM: boolean) => {
+    if (subs.current.has(id)) return;
     const unsub = onSnapshot(
       firestoreQuery,
       (snap: any) => {
-        // ASC order → docs are already oldest-first, no reverse needed
+        // DESC order — msgs[0] is newest
         const msgs: Message[] = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Message));
-        processSnapshot(id, isDM, label, msgs);
+        processSnapshot(id, isDM, msgs);
       },
-      (err: any) => console.error(`[Unread] ❌ snapshot error for ${label}:`, err)
+      (err: any) => console.error(`[Unread] snapshot error ${id}:`, err.code, err.message)
     );
     subs.current.set(id, unsub);
   };
 
-  // Reconcile: add new subscriptions, remove stale ones
-  useEffect(() => {
-    if (!user) { console.log('[Unread] no user, skipping'); return; }
-    console.log(`[Unread] reconcile: ${channels.length} channels, ${dms.length} DMs`);
+  const unsubscribeId = (id: string) => {
+    const unsub = subs.current.get(id);
+    if (unsub) { unsub(); subs.current.delete(id); }
+  };
 
+  useEffect(() => {
+    if (!user) return;
     const desired = new Set<string>();
 
     channels.forEach(ch => {
       desired.add(ch.id);
-      subscribeId(ch.id, `#${ch.id}`, query(
+      subscribeId(ch.id, query(
         collection(db, 'messages'),
         where('channelId', '==', ch.id),
         where('deleted', '==', false),
-        orderBy('timestamp', 'asc'),
+        orderBy('timestamp', 'desc'),
         limit(50)
       ), false);
     });
 
     dms.forEach(dm => {
-      const key = dm.otherUserId;
-      desired.add(key);
-      console.log(`[Unread] DM: id=${dm.id} otherUserId=${dm.otherUserId} key=${key}`);
-      // Use ASC + limit — the existing (dmId, deleted, timestamp ASC) index covers this.
-      // We reverse() after fetching to get newest-last order for processSnapshot.
-      subscribeId(key, `DM:${key}`, query(
+      desired.add(dm.otherUserId);
+      subscribeId(dm.otherUserId, query(
         collection(db, 'messages'),
         where('dmId', '==', dm.id),
         where('deleted', '==', false),
-        orderBy('timestamp', 'asc'),
+        orderBy('timestamp', 'desc'),
         limit(50)
       ), true);
     });
 
-    // Remove stale
+    // Remove stale subscriptions
     subs.current.forEach((_, id) => {
-      if (!desired.has(id)) {
-        console.log(`[Unread] removing stale subscription ${id}`);
-        const unsub = subs.current.get(id);
-        if (unsub) { unsub(); subs.current.delete(id); }
-      }
+      if (!desired.has(id)) unsubscribeId(id);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, channels.map(c => c.id).join(','), dms.map(d => d.id + d.otherUserId).join(',')]);
+  }, [user?.id,
+      channels.map(c => c.id).join(','),
+      dms.map(d => d.id + d.otherUserId).join(',')]);
 
-  useEffect(() => {
-    return () => { subs.current.forEach(u => u()); subs.current.clear(); };
-  }, []);
+  useEffect(() => () => { subs.current.forEach(u => u()); subs.current.clear(); }, []);
 
   return null;
 }

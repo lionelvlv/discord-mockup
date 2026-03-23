@@ -28,9 +28,12 @@ export function useCustomEmojis() {
 const URL_RE = /(https?:\/\/[^\s<>'")\]]+)/g;
 
 // Render text with custom emoji tokens, clickable URLs, and @mention highlights
-export const RenderWithCustomEmojis: React.FC<{ text: string; customEmojis: CustomEmoji[] }> = ({ text, customEmojis }) => {
+export const RenderWithCustomEmojis: React.FC<{
+  text: string;
+  customEmojis: CustomEmoji[];
+  onMentionClick?: (username: string, e: React.MouseEvent) => void;
+}> = ({ text, customEmojis, onMentionClick }) => {
   const emojiMap = new Map(customEmojis.map(e => [`:${e.name}:`, e]));
-  // Split on custom emoji tokens, URLs, and @mentions
   const parts = text.split(/(:[a-z0-9_]+:|https?:\/\/[^\s<>'")\]]+|@[a-zA-Z0-9_]+)/g);
 
   return (
@@ -44,7 +47,13 @@ export const RenderWithCustomEmojis: React.FC<{ text: string; customEmojis: Cust
           return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="msg-link">{part}</a>;
         }
         if (/^@[a-zA-Z0-9_]+$/.test(part)) {
-          return <span key={i} className="msg-mention">{part}</span>;
+          const username = part.slice(1);
+          return onMentionClick
+            ? <span key={i} className="msg-mention msg-mention-clickable"
+                onClick={e => onMentionClick(username, e)}
+                title={`View ${username}'s profile`}
+              >{part}</span>
+            : <span key={i} className="msg-mention">{part}</span>;
         }
         return <React.Fragment key={i}>{part}</React.Fragment>;
       })}

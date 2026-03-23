@@ -6,6 +6,7 @@ import { User } from '../../types/user';
 import { formatTime } from '../../lib/time';
 import { detectEmbeds, EmbedInfo } from '../../lib/mediaUpload';
 import { useCustomEmojis, RenderWithCustomEmojis } from './CustomEmojiRenderer';
+import { getUserByUsername } from './MessageList';
 import EmojiPicker from './EmojiPicker';
 import Avatar from '../ui/Avatar';
 import ProfilePopup from '../ui/ProfilePopup';
@@ -24,7 +25,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
   const [isEditing, setIsEditing]         = useState(false);
   const [editContent, setEditContent]     = useState(message.content);
   const [editSaving, setEditSaving]       = useState(false);
-  const [profileAnchor, setProfileAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [profileTarget, setProfileTarget] = useState<{ user: import('../../types/user').User; x: number; y: number } | null>(null);
+
+  const handleMentionClick = (username: string, e: React.MouseEvent) => {
+    const u = getUserByUsername(username);
+    if (u) setProfileTarget({ user: u, x: e.clientX, y: e.clientY });
+  };
   const editRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -101,7 +107,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
     >
       <button
         className="message-avatar-btn"
-        onClick={e => setProfileAnchor({ x: e.clientX, y: e.clientY })}
+        onClick={e => setProfileTarget({ user: { ...sender, id: message.senderId }, x: e.clientX, y: e.clientY })}
         title={`View ${sender.username}'s profile`}
       >
         <Avatar src={sender.avatarUrl} size={32} />
@@ -111,7 +117,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
         <div className="message-header">
           <span
             className="message-author message-author-clickable"
-            onClick={e => setProfileAnchor({ x: e.clientX, y: e.clientY })}
+            onClick={e => setProfileTarget({ user: { ...sender, id: message.senderId }, x: e.clientX, y: e.clientY })}
             title={`View ${sender.username}'s profile`}
           >
             {sender.username}
@@ -145,7 +151,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
           <>
             {message.content && (
               <div className="message-bubble panel-outset">
-                <RenderWithCustomEmojis text={message.content} customEmojis={customEmojis} />
+                <RenderWithCustomEmojis text={message.content} customEmojis={customEmojis} onMentionClick={handleMentionClick} />
               </div>
             )}
 
@@ -216,11 +222,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
           )}
         </div>
       )}
-      {profileAnchor && !sender.isDeleted && (
+      {profileTarget && (
         <ProfilePopup
-          member={{ ...sender, id: message.senderId }}
-          anchor={profileAnchor}
-          onClose={() => setProfileAnchor(null)}
+          member={profileTarget.user}
+          anchor={{ x: profileTarget.x, y: profileTarget.y }}
+          onClose={() => setProfileTarget(null)}
         />
       )}
     </div>

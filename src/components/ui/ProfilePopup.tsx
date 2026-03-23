@@ -43,10 +43,10 @@ const ProfilePopup: React.FC<ProfilePopupProps> = ({ member, anchor, onClose, on
   if (isMobile) {
     style = {
       position: 'fixed',
-      bottom: 70, // above bottom nav
+      top: '30%',
       left: '50%',
-      transform: 'translateX(-50%)',
-      width: W,
+      transform: 'translate(-50%, -50%)',
+      width: Math.min(W, window.innerWidth - 24),
       zIndex: 1200,
     };
   } else {

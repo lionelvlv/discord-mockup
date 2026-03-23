@@ -134,3 +134,12 @@ a {
   font-weight: bold;
   cursor: default;
 }
+
+.msg-mention-clickable {
+  cursor: pointer;
+}
+.msg-mention-clickable:hover {
+  filter: brightness(1.2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

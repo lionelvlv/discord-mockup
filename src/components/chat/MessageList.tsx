@@ -19,6 +19,14 @@ interface MessageListProps {
 // Shared across all MessageList instances (channel + DM).
 // Avoids N redundant Firestore subscriptions when switching channels.
 let sharedUsersById: Map<string, User> = new Map();
+export function getUserById(id: string): User | undefined { return sharedUsersById.get(id); }
+export function getUserByUsername(username: string): User | undefined {
+  const lower = username.toLowerCase();
+  for (const u of sharedUsersById.values()) {
+    if (u.username?.toLowerCase() === lower) return u;
+  }
+  return undefined;
+}
 const userCacheListeners = new Set<() => void>();
 let userCacheUnsub: (() => void) | null = null;
 

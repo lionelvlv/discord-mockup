@@ -1,18 +1,12 @@
-// ── Unread message store ──────────────────────────────────────────────────────
-// Tracks per-channel/DM unread counts and mention counts.
-// Singleton shared across ChannelList, DMList, GlobalUnreadWatcher, MessageList.
-
 import { Message } from '../../types/message';
 
 interface UnreadEntry {
   unread: number;
   mentions: number;
-  // ids of messages that are @mentions — so we can decrement when they're seen
   mentionMessageIds: Set<string>;
 }
 
 type Listener = () => void;
-
 let data: Record<string, UnreadEntry> = {};
 const listeners = new Set<Listener>();
 
@@ -23,36 +17,35 @@ export function subscribeUnread(fn: Listener): () => void {
   return () => listeners.delete(fn);
 }
 
-export function getUnread(id: string): { unread: number; mentions: number; mentionMessageIds: Set<string> } {
+export function getUnread(id: string) {
   const e = data[id];
-  return { unread: e?.unread ?? 0, mentions: e?.mentions ?? 0, mentionMessageIds: e?.mentionMessageIds ?? new Set() };
+  return { unread: e?.unread ?? 0, mentions: e?.mentions ?? 0, mentionMessageIds: e?.mentionMessageIds ?? new Set<string>() };
 }
 
+// Zero the badge immediately (called when user opens the channel)
 export function markRead(id: string) {
-  const e = data[id];
-  if (!e) return;
-  // Keep mentionMessageIds so IntersectionObserver can still decrement-on-seen
-  data = { ...data, [id]: { unread: 0, mentions: 0, mentionMessageIds: e.mentionMessageIds } };
+  data = { ...data, [id]: { unread: 0, mentions: 0, mentionMessageIds: new Set() } };
   notify();
 }
 
-// Called when a mentioned message scrolls into view
+// Called when a mentioned message scrolls into view — decrements badge by 1
 export function markMentionSeen(channelOrDMId: string, messageId: string) {
   const e = data[channelOrDMId];
-  if (!e || !e.mentionMessageIds.has(messageId)) return;
-  const newIds = new Set(e.mentionMessageIds);
-  newIds.delete(messageId);
-  const newMentions = Math.max(0, e.mentions - 1);
-  const newUnread   = Math.max(0, e.unread - 1);
-  data = { ...data, [channelOrDMId]: { unread: newUnread, mentions: newMentions, mentionMessageIds: newIds } };
+  if (!e?.mentionMessageIds.has(messageId)) return;
+  const ids = new Set(e.mentionMessageIds);
+  ids.delete(messageId);
+  data = { ...data, [channelOrDMId]: {
+    unread:           Math.max(0, e.unread - 1),
+    mentions:         Math.max(0, e.mentions - 1),
+    mentionMessageIds: ids,
+  }};
   notify();
 }
 
-// Update from GlobalUnreadWatcher.
-// isDM=true means every incoming message counts as a mention (DMs are always personal).
+// msgs can be in any order — we check all of them against lastReadTimestamp
 export function updateUnread(
   id: string,
-  messages: Message[],
+  msgs: Message[],
   currentUserId: string,
   currentUsername: string,
   lastReadTimestamp: number,
@@ -60,16 +53,16 @@ export function updateUnread(
 ) {
   let unread = 0, mentions = 0;
   const mentionMessageIds = new Set<string>();
+  const lower = currentUsername.toLowerCase();
 
-  for (const msg of messages) {
-    if (msg.timestamp <= lastReadTimestamp) continue;
-    if (msg.senderId === currentUserId) continue;
-    if (msg.deleted) continue;
+  for (const m of msgs) {
+    if (m.timestamp <= lastReadTimestamp) continue;
+    if (m.senderId === currentUserId) continue;
+    if (m.deleted) continue;
     unread++;
-    const isExplicitMention = msg.content?.toLowerCase().includes(`@${currentUsername.toLowerCase()}`);
-    if (isDM || isExplicitMention) {
+    if (isDM || m.content?.toLowerCase().includes(`@${lower}`)) {
       mentions++;
-      mentionMessageIds.add(msg.id);
+      mentionMessageIds.add(m.id);
     }
   }
 
@@ -79,6 +72,6 @@ export function updateUnread(
   notify();
 }
 
-export function getTotalMentions(): number {
-  return Object.values(data).reduce((sum, e) => sum + e.mentions, 0);
+export function getTotalMentions() {
+  return Object.values(data).reduce((s, e) => s + e.mentions, 0);
 }
