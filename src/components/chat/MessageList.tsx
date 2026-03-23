@@ -56,10 +56,11 @@ function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightC
   const { user: currentUser } = useAuth();
 
   // Persist last-read timestamps so unread state survives page reload
-  const lastReadRef = useRef<number>(() => {
+  const storedLastRead = (() => {
     if (!channelOrDMId) return 0;
     try { return parseInt(localStorage.getItem(`lastRead:${channelOrDMId}`) ?? '0', 10); } catch { return 0; }
   })();
+  const lastReadRef = useRef<number>(storedLastRead);
 
   // Mark read when viewing this channel — save timestamp to localStorage
   useEffect(() => {
