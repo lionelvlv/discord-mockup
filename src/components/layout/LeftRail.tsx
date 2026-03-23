@@ -5,7 +5,6 @@ import ChannelList from '../lists/ChannelList';
 import VoiceChannelList from '../lists/VoiceChannelList';
 import DMList from '../lists/DMList';
 import ServerSettings from './ServerSettings';
-import UserSettings from './UserSettings';
 import ChannelSearch from './ChannelSearch';
 import './LeftRail.css';
 
@@ -17,7 +16,6 @@ const LeftRail: React.FC<LeftRailProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [serverName, setServerName] = useState('RETROCHORD');
   const [showSettings, setShowSettings] = useState(false);
-  const [showUserSettings, setShowUserSettings] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToServerSettings(s => setServerName(s.name));
@@ -55,9 +53,6 @@ const LeftRail: React.FC<LeftRailProps> = ({ onNavigate }) => {
 
       {showSettings && user?.isAdmin && (
         <ServerSettings onClose={() => setShowSettings(false)} />
-      )}
-      {showUserSettings && (
-        <UserSettings onClose={() => setShowUserSettings(false)} />
       )}
     </>
   );

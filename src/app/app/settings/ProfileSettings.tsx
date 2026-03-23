@@ -8,6 +8,7 @@ import {
   CustomEmoji, MAX_CUSTOM_EMOJIS_PER_USER
 } from '../../../features/customEmojis/api';
 import './settings.css';
+import { getTheme, applyTheme, DEFAULT_THEME, PRESET_FONTS, Theme } from '../../../features/theme/themeStore';
 
 const CLOUD_NAME   = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
@@ -285,6 +286,92 @@ const ProfileSettings: React.FC = () => {
             {myEmojis.length === 0 && (
               <div className="avatar-section-divider">No custom emojis yet — upload one above!</div>
             )}
+          </div>
+
+          {/* ── Appearance ─────────────────────────────────────────────── */}
+          <div className="form-section panel">
+            <h2 className="section-title">APPEARANCE</h2>
+
+            {/* Presets */}
+            <div className="appearance-block">
+              <label className="appearance-label">Color presets</label>
+              <div className="preset-swatches">
+                {PRESETS.map(p => (
+                  <button key={p.name} type="button" className="preset-btn" title={p.name}
+                    style={{ background: p.colorAccent, border: `2px outset ${p.colorSurface1}` }}
+                    onClick={() => setTheme(t => { const next = {...t,...p}; applyTheme(next); return next; })}>
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Colors */}
+            <div className="appearance-block">
+              <label className="appearance-label">Colors</label>
+              <div className="appearance-color-grid">
+                {([['Panel bg','colorSurface1'],['Chat bg','colorSurface2'],['Accent','colorAccent'],['Text','colorText'],['Titlebar','colorTitlebar']] as [string, keyof Theme][]).map(([lbl, key]) => (
+                  <label key={key} className="appearance-color-row">
+                    <span>{lbl}</span>
+                    <input type="color" value={theme[key] as string} onChange={e => updateTheme({[key]: e.target.value})} />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Background */}
+            <div className="appearance-block">
+              <label className="appearance-label">Chat background image (max 5MB)</label>
+              <label className="button-95 file-btn" style={{fontSize:10}}>
+                📁 Upload image
+                <input type="file" accept="image/*" hidden onChange={handleBgUpload} />
+              </label>
+              {bgPreview && <>
+                <div className="bg-preview" style={{backgroundImage:`url("${bgPreview}")`,marginTop:6}} />
+                <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
+                  <span style={{fontSize:10}}>Opacity</span>
+                  <input type="range" min="0" max="1" step="0.05" style={{flex:1}}
+                    value={theme.bgOpacity} onChange={e => updateTheme({bgOpacity:parseFloat(e.target.value)})} />
+                  <span style={{fontSize:10}}>{Math.round(theme.bgOpacity*100)}%</span>
+                </div>
+                <button type="button" className="button-95" style={{fontSize:10,marginTop:4}}
+                  onClick={() => { setBgPreview(''); updateTheme({bgImageUrl:'',bgOpacity:0.3}); }}>
+                  ✕ Remove
+                </button>
+              </>}
+            </div>
+
+            {/* Font */}
+            <div className="appearance-block">
+              <label className="appearance-label">Font</label>
+              <div className="font-list">
+                {PRESET_FONTS.map(f => (
+                  <button key={f.name} type="button"
+                    className={`font-item button-95 ${theme.fontFamily===f.family?'active':''}`}
+                    style={{fontFamily:f.family}} onClick={() => updateTheme({fontFamily:f.family,fontUrl:'',fontName:f.name})}>
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap',alignItems:'center'}}>
+                <input className="textarea-95" style={{fontSize:10,padding:'2px 4px',flex:1,minWidth:80}}
+                  placeholder="Custom font name…" value={customFontName} onChange={e=>setCustomFontName(e.target.value)} />
+                <label className="button-95 file-btn" style={{fontSize:10}}>
+                  📁 Upload .ttf/.otf/.woff
+                  <input type="file" accept=".ttf,.otf,.woff,.woff2" hidden onChange={handleFontUpload} />
+                </label>
+              </div>
+              <div className="font-preview panel-inset" style={{fontFamily:theme.fontFamily,marginTop:6}}>
+                The quick brown fox — AaBbCc 0123
+              </div>
+            </div>
+
+            <div style={{display:'flex',gap:8,marginTop:4}}>
+              <button type="button" className="button-95" style={{fontSize:10}}
+                onClick={() => { const t={...DEFAULT_THEME}; setTheme(t); setBgPreview(''); applyTheme(t); }}>
+                ↺ Reset defaults
+              </button>
+            </div>
           </div>
 
           <div className="form-actions">

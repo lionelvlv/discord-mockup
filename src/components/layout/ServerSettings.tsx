@@ -38,40 +38,31 @@ const ServerSettings: React.FC<Props> = ({ onClose }) => {
     if (!serverName.trim()) return;
     setSaving(true);
     await updateServerSettings({ name: serverName.trim() });
-    setSaving(false);
-    setSavedMsg('Saved!');
-    setTimeout(() => setSavedMsg(''), 2000);
+    setSaving(false); setSavedMsg('Saved!'); setTimeout(() => setSavedMsg(''), 2000);
   };
 
   const handleDeleteEmoji = async (id: string) => {
     if (confirm('Delete this emoji?')) await deleteCustomEmoji(id);
   };
 
-  // Group emojis by user
   const emojisByUser = emojis.reduce<Record<string, { username: string; emojis: CustomEmoji[] }>>((acc, e) => {
     if (!acc[e.uploadedBy]) acc[e.uploadedBy] = { username: e.username, emojis: [] };
-    acc[e.uploadedBy].emojis.push(e);
-    return acc;
+    acc[e.uploadedBy].emojis.push(e); return acc;
   }, {});
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="server-settings-modal panel" onClick={e => e.stopPropagation()}>
-
-        {/* Title bar */}
         <div className="server-settings-titlebar">
           <span className="pixel-font" style={{ fontSize: '8px', color: '#fff' }}>⚙️ SERVER SETTINGS</span>
           <button className="button-95 modal-close-btn" onClick={onClose}>✕</button>
         </div>
-
-        {/* Sidebar + content */}
         <div className="server-settings-body">
           <nav className="server-settings-nav">
-            <button className={`ss-nav-btn ${tab === 'general' ? 'active' : ''}`} onClick={() => setTab('general')}>📋 General</button>
-            <button className={`ss-nav-btn ${tab === 'emojis'  ? 'active' : ''}`} onClick={() => setTab('emojis')}>😊 Emojis</button>
-            <button className={`ss-nav-btn ${tab === 'members' ? 'active' : ''}`} onClick={() => setTab('members')}>👥 Members</button>
+            <button className={`ss-nav-btn ${tab==='general'?'active':''}`} onClick={()=>setTab('general')}>📋 General</button>
+            <button className={`ss-nav-btn ${tab==='emojis' ?'active':''}`} onClick={()=>setTab('emojis')}>😊 Emojis</button>
+            <button className={`ss-nav-btn ${tab==='members'?'active':''}`} onClick={()=>setTab('members')}>👥 Members</button>
           </nav>
-
           <div className="server-settings-content">
 
             {tab === 'general' && (
@@ -79,17 +70,10 @@ const ServerSettings: React.FC<Props> = ({ onClose }) => {
                 <h2 className="ss-section-title">GENERAL</h2>
                 <div className="form-group">
                   <label>SERVER NAME:</label>
-                  <input
-                    className="input-95"
-                    value={serverName}
-                    onChange={e => setServerName(e.target.value)}
-                    maxLength={40}
-                  />
+                  <input className="input-95" value={serverName} onChange={e => setServerName(e.target.value)} maxLength={40} />
                 </div>
                 <div className="ss-actions">
-                  <button className="button-95" onClick={handleSaveName} disabled={saving}>
-                    {saving ? 'Saving…' : 'Save'}
-                  </button>
+                  <button className="button-95" onClick={handleSaveName} disabled={saving}>{saving?'Saving…':'Save'}</button>
                   {savedMsg && <span className="ss-saved">{savedMsg}</span>}
                 </div>
               </div>
@@ -99,27 +83,16 @@ const ServerSettings: React.FC<Props> = ({ onClose }) => {
               <div className="ss-section">
                 <h2 className="ss-section-title">CUSTOM EMOJIS</h2>
                 <p className="ss-hint">Each user can upload up to 10 custom emojis (max 256 KB each).</p>
-
-                {Object.keys(emojisByUser).length === 0 && (
-                  <div className="ss-empty">No custom emojis yet.</div>
-                )}
-
+                {Object.keys(emojisByUser).length === 0 && <div className="ss-empty">No custom emojis yet.</div>}
                 {Object.entries(emojisByUser).map(([uid, { username, emojis: ues }]) => (
                   <div key={uid} className="ss-emoji-user-group">
-                    <div className="ss-emoji-user-label">
-                      <strong>{username}</strong>
-                      <span className="ss-hint-small">({ues.length}/10)</span>
-                    </div>
+                    <div className="ss-emoji-user-label"><strong>{username}</strong><span className="ss-hint-small">({ues.length}/10)</span></div>
                     <div className="ss-emoji-grid">
                       {ues.map(e => (
                         <div key={e.id} className="ss-emoji-item">
                           <img src={e.url} alt={e.name} className="ss-emoji-img" title={`:${e.name}:`} />
                           <div className="ss-emoji-name">:{e.name}:</div>
-                          <button
-                            className="ss-emoji-del button-95"
-                            onClick={() => handleDeleteEmoji(e.id)}
-                            title="Delete emoji"
-                          >🗑️</button>
+                          <button className="ss-emoji-del button-95" onClick={() => handleDeleteEmoji(e.id)}>🗑️</button>
                         </div>
                       ))}
                     </div>
@@ -139,14 +112,13 @@ const ServerSettings: React.FC<Props> = ({ onClose }) => {
                         <span className="ss-member-name">{m.username}</span>
                         {m.isAdmin && <span className="ss-admin-badge">👑 Admin</span>}
                       </div>
-                      <span className={`ss-presence ss-presence--${m.presence ?? 'offline'}`}>
-                        {m.presence ?? 'offline'}
-                      </span>
+                      <span className={`ss-presence ss-presence--${m.presence ?? 'offline'}`}>{m.presence ?? 'offline'}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
           </div>
         </div>
       </div>
