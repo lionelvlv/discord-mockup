@@ -43,7 +43,7 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
 
     const watch = (id: string, q: ReturnType<typeof query>) => {
       const unsub = onSnapshot(q, snap => {
-        const msgs: Message[] = snap.docs.map(d => ({ id: d.id, ...d.data() } as Message)).reverse();
+        const msgs: Message[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as Message)).reverse();
         const isInit = !initialisedIds.current.has(id);
         const prev   = prevCounts.current[id] ?? msgs.length;
         initialisedIds.current.add(id);
