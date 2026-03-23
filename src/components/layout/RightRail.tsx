@@ -31,7 +31,7 @@ const RightRail: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
           <NotificationBell onNavigate={onNavigate} />
         </div>
       </div>
-      <MemberList />
+      <MemberList onNavigate={onNavigate} />
     </div>
   );
 };

@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+// Module-level search cache: keyed by query string, stores results + timestamp
+// Avoids re-hitting Firestore for the same query within 2 minutes
+const searchCache = new Map<string, { results: SearchResult[]; ts: number }>();
+const SEARCH_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -47,10 +52,20 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); setOpen(false); setError(null); return; }
-    setLoading(true);
     setError(null);
+
+    // Return cached results immediately if fresh
+    const cached = searchCache.get(q);
+    if (cached && Date.now() - cached.ts < SEARCH_CACHE_TTL) {
+      setResults(cached.results);
+      setOpen(true);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await searchChannelMessages(q, channels);
+      searchCache.set(q, { results: res, ts: Date.now() });
       setResults(res);
       setOpen(true);
     } catch (e: any) {

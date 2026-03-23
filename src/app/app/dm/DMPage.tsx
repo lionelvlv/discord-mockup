@@ -13,10 +13,13 @@ import MessageComposer from '../../../components/chat/MessageComposer';
 import TypingIndicator from '../../../components/chat/TypingIndicator';
 import './dm.css';
 
+// Module-level DM message cache — same pattern as ChannelPage
+const dmMessageCache = new Map<string, Message[]>();
+
 const DMPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const { user: currentUser } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => dmMessageCache.get(userId ?? '') ?? []);
   // Real-time user subscription so deleted/renamed users update live.
   const [otherUser, setOtherUser] = useState<User | null | 'loading'>('loading');
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -56,6 +59,7 @@ const DMPage: React.FC = () => {
       await markDMSeen(dm.id, currentUser.id);
 
       unsubMessages = subscribeToDMMessages(dm.id, (msgs) => {
+        dmMessageCache.set(userId ?? '', msgs);
         setMessages(msgs);
         markDMSeen(dm.id, currentUser.id);
       });

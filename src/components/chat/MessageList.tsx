@@ -82,15 +82,18 @@ function MessageList({ messages, highlightMessageId, onHighlightClear }: Message
     prevMessageCount.current = 0;
   }, []); // empty dep = per mount; parent remounts on channel change
 
-  // Scroll to highlighted message
+  // Scroll to highlighted message — defer slightly for mobile layout paint
   useEffect(() => {
     if (!highlightMessageId || didScrollToHighlight.current) return;
     const el = messageRefs.current.get(highlightMessageId);
     if (!el) return;
     didScrollToHighlight.current = true;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setFlashId(highlightMessageId);
-    setTimeout(() => { setFlashId(undefined); onHighlightClear?.(); }, 3000);
+    // rAF ensures layout is complete before we measure scroll position
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setFlashId(highlightMessageId);
+      setTimeout(() => { setFlashId(undefined); onHighlightClear?.(); }, 3000);
+    });
   }, [messages, highlightMessageId, onHighlightClear]);
 
   useEffect(() => { didScrollToHighlight.current = false; }, [highlightMessageId]);

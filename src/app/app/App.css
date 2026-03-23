@@ -61,7 +61,13 @@
   /* Default: hide left + right, show main */
   .left-section  { display: none; }
   .right-section { display: none; }
-  .main-section  { display: flex; }
+  .main-section  { display: flex; overflow: hidden; height: 100%; }
+
+  /* Critical: each section must fill the grid cell and not overflow the viewport */
+  .left-section, .right-section, .main-section {
+    max-height: 100%;
+    overflow: hidden;
+  }
 
   /* Tab switching via data attribute on .app-layout */
   .app-layout[data-mobile-tab="channels"] .left-section  { display: flex; }

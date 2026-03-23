@@ -79,7 +79,7 @@ const ProfilePopup: React.FC<{
 };
 
 // ── MemberList ────────────────────────────────────────────────────────────────
-const MemberList: React.FC = () => {
+const MemberList: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [members, setMembers] = useState<User[]>([]);
@@ -136,6 +136,7 @@ const MemberList: React.FC = () => {
 
   const handleDM = (member: User) => {
     setProfilePopup(null);
+    onNavigate?.();
     navigate(`/app/dm/${member.id}`);
   };
 

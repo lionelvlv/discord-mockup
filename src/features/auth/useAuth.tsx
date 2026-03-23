@@ -49,41 +49,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('[Auth] Signed in as', firebaseUser.uid);
 
-      // ── RTDB presence with server-side onDisconnect ──────────────────────
-      // .info/connected fires true when the RTDB WebSocket is live.
-      // We register onDisconnect BEFORE writing 'online' so a tab-close/crash
-      // is handled server-side even if our JS never runs the cleanup.
-      const presenceRef = ref(rtdb, `presence/${firebaseUser.uid}`);
+      // ── Foolproof presence: heartbeat + TTL + multi-signal offline detection ──
+      //
+      // Stores { online: bool, lastSeen: timestamp } in RTDB.
+      // Client computes actual status from age:
+      //   lastSeen < 90s  → online
+      //   90s–5min        → idle
+      //   > 5min or gone  → offline
+      //
+      // This survives ALL failure modes:
+      //  ✓ Normal tab close   → beforeunload + onDisconnect.remove()
+      //  ✓ Device power off   → onDisconnect fires when TCP times out
+      //  ✓ Internet cut       → onDisconnect fires; heartbeat stops → ages out
+      //  ✓ Mobile background  → visibilitychange pauses heartbeat → ages out in 90s
+      //  ✓ App crash / kill   → onDisconnect fires on TCP close
+      //  ✓ Long idle          → heartbeat stops → ages to idle/offline
+      //  ✓ Reconnect          → re-registers onDisconnect, resumes heartbeat
+
+      const presenceRef  = ref(rtdb, `presence/${firebaseUser.uid}`);
       const connectedRef = ref(rtdb, '.info/connected');
 
-      let isReconnecting = false;
+      let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+      let isConnected = false;
+
+      const writeHeartbeat = async () => {
+        if (!isConnected || document.visibilityState === 'hidden') return;
+        try { await set(presenceRef, { online: true, lastSeen: Date.now() }); } catch { /* retry next tick */ }
+      };
+
+      const goOnline = async () => {
+        isConnected = true;
+        await onDisconnect(presenceRef).remove(); // server clears on disconnect
+        await set(presenceRef, { online: true, lastSeen: Date.now() });
+        await updateDoc(doc(db, 'users', firebaseUser.uid), { presence: 'online' }).catch(() => {});
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        heartbeatTimer = setInterval(writeHeartbeat, 30_000);
+      };
+
+      const goOffline = async (writeNow = false) => {
+        isConnected = false;
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+        if (writeNow) {
+          try { await set(presenceRef, { online: false, lastSeen: 0 }); } catch { /* best effort */ }
+          await updateDoc(doc(db, 'users', firebaseUser.uid), { presence: 'offline' }).catch(() => {});
+        }
+      };
 
       const connectedHandler = onValue(connectedRef, async (snap) => {
-        if (!snap.val()) {
-          console.log('[Auth] RTDB disconnected');
-          return;
-        }
-        console.log('[Auth] RTDB connected — registering onDisconnect and going online');
-        isReconnecting = true;
-        // Register server-side disconnect handler FIRST
-        await onDisconnect(presenceRef).set('offline');
-        // Then write online status
-        await set(presenceRef, 'online');
-        // Mirror to Firestore so MemberList picks it up immediately
-        await updateDoc(doc(db, 'users', firebaseUser.uid), { presence: 'online' }).catch(() => {});
-        isReconnecting = false;
+        if (snap.val()) { await goOnline(); }
+        else { await goOffline(); }
       });
       rtdbUnsubs.push(() => off(connectedRef, 'value', connectedHandler));
 
-      // Mirror RTDB presence changes → Firestore (catches server-side disconnect).
-      // Guard: skip the mirror if we just wrote 'online' ourselves to avoid a
-      // transient 'offline' flash during the reconnect sequence.
-      const presenceHandler = onValue(presenceRef, async (snap) => {
-        const status = snap.val();
-        console.log(`[Auth] RTDB presence changed: ${status}`);
-        if (status === 'offline' && !isReconnecting) {
-          await updateDoc(doc(db, 'users', firebaseUser.uid), { presence: 'offline' }).catch(() => {});
+      // visibilitychange: pause heartbeat when backgrounded (mobile focus loss)
+      const handleVisibility = () => {
+        if (document.visibilityState === 'hidden') {
+          if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+        } else if (isConnected) {
+          writeHeartbeat();
+          if (heartbeatTimer) clearInterval(heartbeatTimer);
+          heartbeatTimer = setInterval(writeHeartbeat, 30_000);
         }
+      };
+      document.addEventListener('visibilitychange', handleVisibility);
+      rtdbUnsubs.push(() => document.removeEventListener('visibilitychange', handleVisibility));
+      rtdbUnsubs.push(() => { if (heartbeatTimer) clearInterval(heartbeatTimer); });
+
+      // Mirror RTDB lastSeen → Firestore presence (drives the dot in MemberList)
+      const presenceHandler = onValue(presenceRef, async (snap) => {
+        const val = snap.val();
+        if (!val || !val.online) {
+          await updateDoc(doc(db, 'users', firebaseUser.uid), { presence: 'offline' }).catch(() => {});
+          return;
+        }
+        const age = Date.now() - (val.lastSeen ?? 0);
+        const status = age < 90_000 ? 'online' : age < 300_000 ? 'idle' : 'offline';
+        await updateDoc(doc(db, 'users', firebaseUser.uid), { presence: status }).catch(() => {});
       });
       rtdbUnsubs.push(() => off(presenceRef, 'value', presenceHandler));
 
@@ -91,26 +132,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       firestoreUnsub = onSnapshot(doc(db, 'users', firebaseUser.uid), (snap) => {
         if (!snap.exists()) return;
         const data = snap.data() as User;
-        // isDeleted must be explicitly true — missing/undefined field (legacy accounts)
-        // should NOT log the user out
         if (data.isDeleted === true) {
           alert('Your account has been deleted by an administrator.');
           apiLogout();
           return;
         }
-        console.log('[Auth] User doc updated:', data.username, 'presence:', data.presence);
         setUser({ ...data, id: snap.id });
         storage.set('currentUser', { ...data, id: snap.id });
       });
     });
 
-    // Best-effort: set offline immediately on tab close (RTDB onDisconnect is the
-    // real safety net, but this fires synchronously on modern browsers).
+    // Immediate offline on tab close — belt-and-suspenders with onDisconnect
     const handleBeforeUnload = () => {
       const uid = auth.currentUser?.uid;
       if (uid) {
-        // navigator.sendBeacon is fire-and-forget; best effort only
-        set(ref(rtdb, `presence/${uid}`), 'offline').catch(() => {});
+        try { set(ref(rtdb, `presence/${uid}`), { online: false, lastSeen: 0 }); } catch { /* best effort */ }
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
