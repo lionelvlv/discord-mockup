@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/useAuth';
 import { getOrCreateDM, markDMSeen } from '../../../features/chat/dmApi';
-import { subscribeToDMMessages, sendMessage, getTypingUsers } from '../../../features/chat/api';
+import { subscribeToDMMessages, sendMessage, getTypingUsers, markNotificationsReadForChannel } from '../../../features/chat/api';
 import { Message, Attachment } from '../../../types/message';
 import { User } from '../../../types/user';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -29,11 +29,15 @@ const DMPage: React.FC = () => {
   // needing to be recreated (avoids stale closure over the initial empty string)
   const dmIdRef = useRef<string>('');
 
-  // Tell the global watcher which DM is active (keyed by otherUserId)
+  // Tell the global watcher which DM is active and clear its notifications
   useEffect(() => {
-    if (userId) { setGlobalActiveId(userId); saveLastRead(userId); }
+    if (!userId || !currentUser) return;
+    setGlobalActiveId(userId);
+    saveLastRead(userId);
+    // Mark all notifications from this user as read
+    markNotificationsReadForChannel(currentUser.id, undefined, userId).catch(() => {});
     return () => setGlobalActiveId(null);
-  }, [userId]);
+  }, [userId, currentUser?.id]);
 
   // Subscribe to the other user's Firestore doc in real-time.
   // This handles: user gets deleted mid-conversation, username/avatar changes, etc.

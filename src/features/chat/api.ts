@@ -452,3 +452,23 @@ export async function searchDMMessages(
   results.sort((a, b) => b.timestamp - a.timestamp);
   return results.slice(0, 30);
 }
+
+// Mark all unread notifications for a specific channel or DM as read
+export async function markNotificationsReadForChannel(
+  userId: string,
+  channelId?: string,
+  fromUserId?: string
+): Promise<void> {
+  if (!channelId && !fromUserId) return;
+  const q = channelId
+    ? query(collection(db, 'notifications'),
+        where('toUserId', '==', userId),
+        where('channelId', '==', channelId),
+        where('read', '==', false))
+    : query(collection(db, 'notifications'),
+        where('toUserId', '==', userId),
+        where('fromUserId', '==', fromUserId),
+        where('read', '==', false));
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map(d => updateDoc(d.ref, { read: true })));
+}

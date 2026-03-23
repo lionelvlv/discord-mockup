@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/useAuth';
-import { subscribeToChannelMessages, sendMessage, getTypingUsers } from '../../../features/chat/api';
+import { subscribeToChannelMessages, sendMessage, getTypingUsers, markNotificationsReadForChannel } from '../../../features/chat/api';
 import { Channel } from '../../../types/channel';
 import { Message, Attachment } from '../../../types/message';
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
@@ -31,11 +31,14 @@ const ChannelPage: React.FC = () => {
   // If we have cached messages, skip the loading state — feel instant
   const [loading, setLoading] = useState(() => !messageCache.has(channelId ?? ''));
 
-  // Tell the global watcher which channel is active so it skips badging it
+  // Tell the global watcher which channel is active and clear its notifications
   useEffect(() => {
-    if (resolvedId) { setGlobalActiveId(resolvedId); saveLastRead(resolvedId); }
+    if (!resolvedId || !user) return;
+    setGlobalActiveId(resolvedId);
+    saveLastRead(resolvedId);
+    markNotificationsReadForChannel(user.id, resolvedId).catch(() => {});
     return () => setGlobalActiveId(null);
-  }, [resolvedId]);
+  }, [resolvedId, user?.id]);
 
   // Resolve the channel — first try as a Firestore document ID, then fall back to
   // a name lookup. Once resolved we subscribe to the doc for live edits.

@@ -1,28 +1,23 @@
 /**
- * GlobalUnreadWatcher — mounts once in AppLayout, subscribes to the last 50
- * messages of every text channel + every DM the current user has open.
- * Updates the unread store and plays the mention sound.
- * This is the ONLY place unread state is computed; MessageList no longer does it.
+ * GlobalUnreadWatcher — subscribes to recent messages for every channel + DM.
+ * Drives unread badges in the sidebar and plays mention sounds.
  */
 import { useEffect, useRef } from 'react';
-import {
-  collection, onSnapshot, query, where, orderBy, limit
-} from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Message } from '../../types/message';
-import { updateUnread, markRead } from '../../features/chat/unreadStore';
+import { updateUnread } from '../../features/chat/unreadStore';
 import { soundManager } from '../../lib/sounds';
 import { useAuth } from '../../features/auth/useAuth';
 
-// The currently viewed channel/DM id — set by ChannelPage/DMPage
 let _activeId: string | null = null;
 export function setGlobalActiveId(id: string | null) { _activeId = id; }
 
-function getLastRead(id: string): number {
-  try { return parseInt(localStorage.getItem(`lastRead:${id}`) ?? '0', 10); } catch { return 0; }
-}
 export function saveLastRead(id: string) {
   try { localStorage.setItem(`lastRead:${id}`, String(Date.now())); } catch {}
+}
+function getLastRead(id: string): number {
+  try { return parseInt(localStorage.getItem(`lastRead:${id}`) ?? '0', 10); } catch { return 0; }
 }
 
 interface WatcherProps {
@@ -32,65 +27,92 @@ interface WatcherProps {
 
 export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
   const { user } = useAuth();
-  const initialisedIds = useRef(new Set<string>());
-  const prevCounts     = useRef<Record<string, number>>({});
 
+  // Stable refs so the effect doesn't need to re-run when lists update
+  const channelsRef = useRef(channels);
+  const dmsRef      = useRef(dms);
+  const userRef     = useRef(user);
+  channelsRef.current = channels;
+  dmsRef.current      = dms;
+  userRef.current     = user;
+
+  // Per-subscription state — stable across re-renders
+  const subs       = useRef<Map<string, () => void>>(new Map());  // key → unsub
+  const initSet    = useRef<Set<string>>(new Set());              // ids we've loaded once
+  const prevCounts = useRef<Record<string, number>>({});
+
+  const processSnapshot = (id: string, isDM: boolean, msgs: Message[]) => {
+    const cur  = userRef.current;
+    if (!cur) return;
+
+    const isInit  = !initSet.current.has(id);
+    const prev    = prevCounts.current[id] ?? msgs.length;
+    initSet.current.add(id);
+    prevCounts.current[id] = msgs.length;
+
+    // Active channel: save last-read, compute with now so no badge, keep mention IDs for IO
+    if (id === _activeId) {
+      saveLastRead(id);
+      updateUnread(id, msgs, cur.id, cur.username ?? '', Date.now(), isDM);
+      return;
+    }
+
+    const lastRead = getLastRead(id);
+    let hasNewMention = false;
+
+    if (!isInit && msgs.length > prev) {
+      // Only check truly new messages for sound
+      const newMsgs = msgs.slice(prev);
+      hasNewMention = newMsgs.some(m =>
+        m.senderId !== cur.id &&
+        !m.deleted &&
+        m.timestamp > lastRead &&
+        (isDM || m.content?.toLowerCase().includes(`@${cur.username?.toLowerCase()}`))
+      );
+    }
+
+    updateUnread(id, msgs, cur.id, cur.username ?? '', lastRead, isDM);
+    if (hasNewMention) soundManager.play('mention', 0.8);
+  };
+
+  const subscribeId = (id: string, firestoreQuery: any, isDM: boolean) => {
+    if (subs.current.has(id)) return; // already subscribed
+    const unsub = onSnapshot(firestoreQuery, (snap: any) => {
+      const msgs: Message[] = snap.docs
+        .map((d: any) => ({ id: d.id, ...d.data() } as Message))
+        .reverse();
+      processSnapshot(id, isDM, msgs);
+    }, () => {});
+    subs.current.set(id, unsub);
+  };
+
+  const unsubscribeId = (id: string) => {
+    const unsub = subs.current.get(id);
+    if (unsub) { unsub(); subs.current.delete(id); }
+  };
+
+  // Reconcile subscriptions when lists change — add new, remove stale
   useEffect(() => {
     if (!user) return;
-    const uid      = user.id;
-    const username = user.username?.toLowerCase() ?? '';
-    const unsubs: (() => void)[] = [];
 
-    const watch = (id: string, q: ReturnType<typeof query>, isDM = false) => {
-      const unsub = onSnapshot(q, snap => {
-        const msgs: Message[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as Message)).reverse();
-        const isInit = !initialisedIds.current.has(id);
-        const prev   = prevCounts.current[id] ?? msgs.length;
-        initialisedIds.current.add(id);
-        prevCounts.current[id] = msgs.length;
+    const desired = new Set<string>();
 
-        // If this is the active channel, update last-read but don't wipe mention IDs —
-        // IntersectionObserver in MessageList clears individual mentions as they're seen.
-        if (id === _activeId) {
-          saveLastRead(id);
-          // Still update the unread store with latest data so badge stays at 0 for new msgs
-          updateUnread(id, msgs, uid, user.username ?? '', Date.now(), isDM);
-          return;
-        }
-
-        const lastRead = getLastRead(id);
-        let unread = 0, mentions = 0, hasNewMention = false;
-
-        msgs.forEach((m, i) => {
-          if (m.senderId === uid || m.deleted || m.timestamp <= lastRead) return;
-          unread++;
-          const isMention = isDM || m.content?.toLowerCase().includes(`@${username}`);
-          if (isMention) {
-            mentions++;
-            if (!isInit && i >= prev) hasNewMention = true;
-          }
-        });
-
-        updateUnread(id, msgs, uid, user.username ?? '', lastRead, isDM);
-        if (hasNewMention) soundManager.play('mention', 0.8);
-      }, () => {/* ignore permission errors on channels not yet readable */});
-      unsubs.push(unsub);
-    };
-
-    // Watch all text channels
     channels.forEach(ch => {
-      watch(ch.id, query(
+      desired.add(ch.id);
+      subscribeId(ch.id, query(
         collection(db, 'messages'),
         where('channelId', '==', ch.id),
         where('deleted', '==', false),
         orderBy('timestamp', 'desc'),
         limit(50)
-      ));
+      ), false);
     });
 
-    // Watch all DMs — every message counts as a mention (isDM=true)
     dms.forEach(dm => {
-      watch(dm.otherUserId, query(
+      // Key by otherUserId — matches what ChannelPage/DMPage use for setGlobalActiveId + saveLastRead
+      const key = dm.otherUserId;
+      desired.add(key);
+      subscribeId(key, query(
         collection(db, 'messages'),
         where('dmId', '==', dm.id),
         where('deleted', '==', false),
@@ -99,9 +121,19 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
       ), true);
     });
 
-    return () => unsubs.forEach(u => u());
+    // Remove stale subscriptions (closed DMs, deleted channels)
+    subs.current.forEach((_, id) => {
+      if (!desired.has(id)) unsubscribeId(id);
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, channels.map(c => c.id).join(','), dms.map(d => d.id).join(',')]);
+  }, [user?.id, channels.length, dms.length,
+      channels.map(c => c.id).join(','),
+      dms.map(d => d.id).join(',')]);
 
-  return null; // renders nothing
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { subs.current.forEach(unsub => unsub()); subs.current.clear(); };
+  }, []);
+
+  return null;
 }
