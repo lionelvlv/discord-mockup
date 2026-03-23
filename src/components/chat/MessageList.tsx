@@ -3,7 +3,9 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Message } from '../../types/message';
 import { User } from '../../types/user';
+import { useAuth } from '../../features/auth/useAuth';
 import MessageItem from './MessageItem';
+import { markMentionSeen, getUnread } from '../../features/chat/unreadStore';
 import './MessageList.css';
 
 interface MessageListProps {
@@ -49,7 +51,35 @@ function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightC
   const isInitialLoad        = useRef(true);
   const didScrollToHighlight = useRef(false);
   const [flashId, setFlashId] = useState<string | undefined>(undefined);
+  const { user: currentUser } = useAuth();
   const usersById = useSharedUsers();
+
+  // When a mentioned message scrolls into view, decrement the badge immediately
+  useEffect(() => {
+    if (!channelOrDMId) return;
+    const { mentionMessageIds } = getUnread(channelOrDMId);
+    if (!mentionMessageIds.size) return;
+
+    const observed = new Map<Element, string>();
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const msgId = observed.get(entry.target);
+        if (msgId) {
+          markMentionSeen(channelOrDMId, msgId);
+          io.unobserve(entry.target);
+          observed.delete(entry.target);
+        }
+      });
+    }, { root: listRef.current, threshold: 0.5 });
+
+    mentionMessageIds.forEach(msgId => {
+      const el = messageRefs.current.get(msgId);
+      if (el) { io.observe(el); observed.set(el, msgId); }
+    });
+
+    return () => io.disconnect();
+  }, [channelOrDMId, messages]);
 
 
 
@@ -109,21 +139,28 @@ function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightC
     email: '', bio: '', presence: 'offline', isDeleted: true,
   };
 
+  const { mentionMessageIds } = channelOrDMId
+    ? getUnread(channelOrDMId)
+    : { mentionMessageIds: new Set<string>() };
+
   return (
     <div className="message-list" ref={listRef}>
       {messages.map((message) => {
         const sender = usersById.get(message.senderId) ?? { ...DELETED_PLACEHOLDER, id: message.senderId };
+        const isMentionUnread = mentionMessageIds.has(message.id);
         return (
           <div
             key={message.id}
             ref={el => { if (el) messageRefs.current.set(message.id, el); else messageRefs.current.delete(message.id); }}
-            className={flashId === message.id ? 'message-highlight-flash' : ''}
+            className={[
+              flashId === message.id ? 'message-highlight-flash' : '',
+              isMentionUnread ? 'message-mention-unread' : '',
+            ].filter(Boolean).join(' ')}
           >
             <MessageItem message={message} sender={sender} />
           </div>
         );
       })}
-      {/* Invisible anchor — kept for programmatic use if needed */}
       <div style={{ height: 1 }} />
     </div>
   );

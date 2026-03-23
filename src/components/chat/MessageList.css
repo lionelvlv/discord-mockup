@@ -46,3 +46,10 @@
     overscroll-behavior: contain;
   }
 }
+
+/* Unread mention message — subtle left-border + faint tint until seen */
+.message-mention-unread {
+  border-left: 3px solid var(--accent-primary);
+  background: rgba(88, 101, 242, 0.06);
+  transition: background 0.8s ease, border-color 0.8s ease;
+}

@@ -41,7 +41,7 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
     const username = user.username?.toLowerCase() ?? '';
     const unsubs: (() => void)[] = [];
 
-    const watch = (id: string, q: ReturnType<typeof query>) => {
+    const watch = (id: string, q: ReturnType<typeof query>, isDM = false) => {
       const unsub = onSnapshot(q, snap => {
         const msgs: Message[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as Message)).reverse();
         const isInit = !initialisedIds.current.has(id);
@@ -62,14 +62,14 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
         msgs.forEach((m, i) => {
           if (m.senderId === uid || m.deleted || m.timestamp <= lastRead) return;
           unread++;
-          const isMention = m.content?.toLowerCase().includes(`@${username}`);
+          const isMention = isDM || m.content?.toLowerCase().includes(`@${username}`);
           if (isMention) {
             mentions++;
             if (!isInit && i >= prev) hasNewMention = true;
           }
         });
 
-        updateUnread(id, msgs, uid, user.username ?? '', lastRead);
+        updateUnread(id, msgs, uid, user.username ?? '', lastRead, isDM);
         if (hasNewMention) soundManager.play('mention', 0.8);
       }, () => {/* ignore permission errors on channels not yet readable */});
       unsubs.push(unsub);
@@ -86,7 +86,7 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
       ));
     });
 
-    // Watch all DMs, keyed by otherUserId (matches DMPage's markRead call)
+    // Watch all DMs — every message counts as a mention (isDM=true)
     dms.forEach(dm => {
       watch(dm.otherUserId, query(
         collection(db, 'messages'),
