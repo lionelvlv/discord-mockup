@@ -45,6 +45,10 @@
     grid-template-columns: 1fr;
     grid-template-rows: 1fr var(--mobile-nav-height, 52px);
     position: relative;
+    /* Prevent the keyboard from scrolling the layout — content shrinks instead */
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   /* All three panels stack on top of each other in the same cell.

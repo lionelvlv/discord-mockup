@@ -38,3 +38,11 @@
   animation: search-flash 3s ease-out forwards;
   border-left: 3px solid #ffe066;
 }
+
+/* Mobile: smooth momentum scroll, prevent page bounce */
+@media (max-width: 768px) {
+  .message-list {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}

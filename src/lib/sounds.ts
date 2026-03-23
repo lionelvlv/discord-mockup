@@ -14,8 +14,11 @@ class SoundManager {
     // Leave call sound (falling tone)
     this.sounds.set('leave', this.createTone([600, 400], 0.2));
     
-    // Message received (gentle ding)
+    // Message received (gentle ding) - no longer auto-played, kept for compatibility
     this.sounds.set('message', this.createTone([800], 0.1));
+    
+    // Mention sound (two-tone ping, more attention-grabbing)
+    this.sounds.set('mention', this.createTone([900, 1100], 0.25));
     
     // Video/Screen share on (quick chirp)
     this.sounds.set('video-on', this.createTone([500, 700], 0.15));

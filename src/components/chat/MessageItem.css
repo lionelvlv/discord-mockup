@@ -363,7 +363,7 @@
   filter: saturate(0.9) contrast(1.03);
 }
 
-/* Reaction picker anchors to the 😊 button */
+/* Reaction picker — desktop: anchors above the 😊 button */
 .reaction-picker-anchor {
   position: absolute;
   bottom: calc(100% + 4px);
@@ -371,40 +371,47 @@
   z-index: 300;
 }
 
-/* On mobile: anchor left instead of right, and constrain width */
-@media (max-width: 768px) {
-  .reaction-picker-anchor {
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
-    /* If near bottom of screen, flip to open downward */
-    bottom: calc(100% + 4px);
-  }
-
-  .reaction-picker-anchor .emoji-picker {
-    position: static;
-    width: 85vw;
-    max-width: 340px;
-    max-height: 300px;
-  }
-
-  .reaction-picker-anchor .emoji-grid {
-    grid-template-columns: repeat(6, 1fr);
-    max-height: 160px;
-  }
-
-  .reaction-picker-anchor .emoji-tab-btn {
-    width: 24px;
-    height: 22px;
-    font-size: 13px;
-  }
-}
-
-/* When inside reaction anchor, picker is static (anchor handles position) */
+/* Picker is static inside the anchor so the anchor handles all positioning */
 .reaction-picker-anchor .emoji-picker {
   position: static;
   width: 320px;
   max-width: calc(100vw - 24px);
+}
+
+/* Mobile: fixed centered overlay so it never clips the viewport edges */
+@media (max-width: 768px) {
+  /* The anchor becomes a full-screen backdrop */
+  .reaction-picker-anchor {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    /* Reset desktop positioning */
+    bottom: auto;
+    right: auto;
+  }
+
+  .reaction-picker-anchor .emoji-picker {
+    position: static;
+    width: 90vw;
+    max-width: 360px;
+    max-height: 65vh;
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.5);
+  }
+
+  .reaction-picker-anchor .emoji-grid {
+    grid-template-columns: repeat(6, 1fr);
+    max-height: 200px;
+  }
+
+  .reaction-picker-anchor .emoji-tab-btn {
+    width: 26px;
+    height: 24px;
+    font-size: 14px;
+  }
 }
 
 /* Custom emoji in reaction badge */

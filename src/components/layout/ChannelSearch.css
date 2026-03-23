@@ -117,3 +117,10 @@
   padding: 0 1px;
   border-radius: 0;
 }
+
+.search-result-where {
+  font-size: 8px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  font-style: italic;
+}

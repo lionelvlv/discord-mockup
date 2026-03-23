@@ -185,7 +185,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, sender: senderProp }
               title="React"
             >😊</button>
             {showReactions && (
-              <div className="reaction-picker-anchor">
+              <div
+                className="reaction-picker-anchor"
+                onClick={e => { if (e.target === e.currentTarget) { setShowReactions(false); setShowActions(false); } }}
+              >
                 <EmojiPicker
                   onSelect={emoji => handleReaction(emoji)}
                   onClose={() => { setShowReactions(false); setShowActions(false); }}

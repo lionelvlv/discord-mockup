@@ -8,6 +8,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import Avatar from '../ui/Avatar';
 import PresenceDot from '../ui/PresenceDot';
+import { getUnread, subscribeUnread } from '../../features/chat/unreadStore';
 import './DMList.css';
 
 interface DMListProps {
@@ -20,6 +21,8 @@ const DMList: React.FC<DMListProps> = ({ onNavigate, search = '' }) => {
   const location = useLocation();
   const { user } = useAuth();
   const [dms, setDms] = useState<DM[]>([]);
+  const [, forceUpdate] = useState(0);
+  useEffect(() => subscribeUnread(() => forceUpdate(n => n + 1)), []);
   // Keep ALL users (including deleted) so DMs with deleted users can still be closed.
   // Real-time subscription ensures profile changes (e.g. soft-delete) are reflected live.
   const [users, setUsers] = useState<Map<string, User>>(new Map());
@@ -119,7 +122,7 @@ const DMList: React.FC<DMListProps> = ({ onNavigate, search = '' }) => {
           return (
             <div
               key={dm.id}
-              className={`dm-item list-item-95 ${isDMActive(dm) ? 'selected' : ''} ${isDeleted ? 'dm-deleted' : ''}`}
+              className={`dm-item list-item-95 ${isDMActive(dm) ? 'selected' : ''} ${isDeleted ? 'dm-deleted' : ''} ${getUnread(otherUser.id).unread > 0 && !isDMActive(dm) ? 'has-unread' : ''}`}
               onClick={() => { if (!isDeleted) { navigate(`/app/dm/${otherUser.id}`); onNavigate?.(); } }}
               onContextMenu={(e) => handleContextMenu(e, dm)}
               title={isDeleted ? 'This user has been deleted — right-click to close DM' : undefined}
@@ -128,7 +131,12 @@ const DMList: React.FC<DMListProps> = ({ onNavigate, search = '' }) => {
               <span className="dm-username" style={{ opacity: isDeleted ? 0.5 : 1 }}>
                 {otherUser.username}
               </span>
-              {!isDeleted && <PresenceDot status={otherUser.presence} />}
+              {!isDeleted && (() => {
+                const u = getUnread(otherUser.id);
+                if (u.mentions > 0) return <span className="unread-badge mention-badge">{u.mentions}</span>;
+                if (u.unread > 0) return <span className="unread-dot" />;
+                return <PresenceDot status={otherUser.presence} />;
+              })()}
             </div>
           );
         })}

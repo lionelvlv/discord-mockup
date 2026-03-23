@@ -394,3 +394,61 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
   );
   await Promise.all(snap.docs.map(d => updateDoc(d.ref, { read: true })));
 }
+
+// ── DM message search ─────────────────────────────────────────────────────────
+export interface DMSearchResult {
+  messageId: string;
+  dmId: string;
+  otherUserId: string;
+  otherUsername: string;
+  content: string;
+  senderId: string;
+  senderName: string;
+  timestamp: number;
+}
+
+export async function searchDMMessages(
+  queryStr: string,
+  userId: string,
+  dms: { id: string; otherUserId: string; otherUsername: string }[]
+): Promise<DMSearchResult[]> {
+  if (!queryStr.trim() || dms.length === 0) return [];
+  const q = queryStr.toLowerCase().trim();
+  const results: DMSearchResult[] = [];
+
+  const usersSnap = await getDocs(collection(db, 'users'));
+  const usernameById = new Map<string, string>();
+  usersSnap.docs.forEach(d => usernameById.set(d.id, d.data().username ?? 'Unknown'));
+
+  await Promise.all(
+    dms.map(async (dm) => {
+      const snap = await getDocs(
+        query(
+          collection(db, 'messages'),
+          where('dmId', '==', dm.id),
+          where('deleted', '==', false),
+          orderBy('timestamp', 'desc'),
+          limit(100)
+        )
+      );
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (typeof data.content === 'string' && data.content.toLowerCase().includes(q)) {
+          results.push({
+            messageId: d.id,
+            dmId: dm.id,
+            otherUserId: dm.otherUserId,
+            otherUsername: dm.otherUsername,
+            content: data.content,
+            senderId: data.senderId ?? '',
+            senderName: usernameById.get(data.senderId) ?? 'Unknown',
+            timestamp: data.timestamp ?? 0,
+          });
+        }
+      });
+    })
+  );
+
+  results.sort((a, b) => b.timestamp - a.timestamp);
+  return results.slice(0, 30);
+}

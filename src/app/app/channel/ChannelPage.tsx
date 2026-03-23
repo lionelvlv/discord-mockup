@@ -154,6 +154,7 @@ const ChannelPage: React.FC = () => {
       <div className="channel-content">
         <MessageList
           messages={messages}
+          channelOrDMId={resolvedId ?? undefined}
           highlightMessageId={highlightMessageId}
           onHighlightClear={() => setSearchParams({})}
         />

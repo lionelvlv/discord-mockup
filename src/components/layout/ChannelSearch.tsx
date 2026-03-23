@@ -8,7 +8,9 @@ import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Channel } from '../../types/channel';
-import { searchChannelMessages, SearchResult } from '../../features/chat/api';
+import { searchChannelMessages, SearchResult, searchDMMessages, DMSearchResult } from '../../features/chat/api';
+import { useAuth } from '../../features/auth/useAuth';
+import { formatTime } from '../../lib/time';
 import { formatTime } from '../../lib/time';
 import './ChannelSearch.css';
 
@@ -18,15 +20,18 @@ interface Props {
 
 const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [dmResults, setDMResults] = useState<DMSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [dms, setDMs] = useState<{ id: string; otherUserId: string; otherUsername: string }[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Subscribe to text channels for search scope
+  // Subscribe to text channels
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'channels'), snap => {
       const list = snap.docs
@@ -36,6 +41,39 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
     });
     return unsub;
   }, []);
+
+  // Subscribe to user's DMs for search scope
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, 'directMessages'), snap => {
+      const usersSnap = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      // We need usernames — subscribe to users collection too
+    });
+    return unsub;
+  }, [user?.id]);
+
+  // Subscribe to DMs + users for search
+  useEffect(() => {
+    if (!user) return;
+    // Get all users first, then subscribe to DMs
+    const usersUnsub = onSnapshot(collection(db, 'users'), userSnap => {
+      const usersById = new Map<string, string>();
+      userSnap.docs.forEach(d => usersById.set(d.id, d.data().username ?? 'Unknown'));
+
+      const dmUnsub = onSnapshot(collection(db, 'directMessages'), dmSnap => {
+        const myDMs = dmSnap.docs
+          .map(d => ({ id: d.id, ...d.data() } as any))
+          .filter(dm => (dm.userA === user.id || dm.userB === user.id) && !dm.closedBy?.includes(user.id))
+          .map(dm => {
+            const otherId = dm.userA === user.id ? dm.userB : dm.userA;
+            return { id: dm.id, otherUserId: otherId, otherUsername: usersById.get(otherId) ?? 'Unknown' };
+          });
+        setDMs(myDMs);
+      });
+      return () => dmUnsub();
+    });
+    return () => usersUnsub();
+  }, [user?.id]);
 
   // Close on outside click
   useEffect(() => {
@@ -64,9 +102,13 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
 
     setLoading(true);
     try {
-      const res = await searchChannelMessages(q, channels);
+      const [res, dmRes] = await Promise.all([
+        searchChannelMessages(q, channels),
+        searchDMMessages(q, user?.id ?? '', dms),
+      ]);
       searchCache.set(q, { results: res, ts: Date.now() });
       setResults(res);
+      setDMResults(dmRes);
       setOpen(true);
     } catch (e: any) {
       console.error('[Search] Failed:', e);
@@ -148,9 +190,28 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
           {error && (
             <div className="search-no-results" style={{ color: '#c00' }}>{error}</div>
           )}
-          {!error && results.length === 0 && !loading && (
+          {!error && results.length === 0 && dmResults.length === 0 && !loading && (
             <div className="search-no-results">No messages found for "{query}"</div>
           )}
+          {/* DM results */}
+          {dmResults.length > 0 && (
+            <div className="search-channel-group">
+              <div className="search-channel-label">💬 Direct Messages</div>
+              {dmResults.map(r => (
+                <button
+                  key={r.messageId}
+                  className="search-result-item"
+                  onClick={() => { setOpen(false); setQuery(''); onNavigate?.(); navigate(`/app/dm/${r.otherUserId}`); }}
+                >
+                  <span className="search-result-sender">{r.senderName}</span>
+                  <span className="search-result-time">{formatTime(r.timestamp)}</span>
+                  <div className="search-result-content">{highlight(r.content, query)}</div>
+                  <div className="search-result-where">DM with {r.otherUsername}</div>
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Channel results */}
           {Object.entries(grouped).map(([channelId, msgs]) => (
             <div key={channelId} className="search-channel-group">
               <div className="search-channel-label">

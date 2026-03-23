@@ -5,6 +5,7 @@ import { createChannel, updateChannel, deleteChannel, initializeDefaultChannels 
 import { Channel } from '../../types/channel';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { getUnread, subscribeUnread } from '../../features/chat/unreadStore';
 import './ChannelList.css';
 
 interface ChannelListProps {
@@ -24,6 +25,9 @@ const ChannelList: React.FC<ChannelListProps> = ({ onNavigate, search = '' }) =>
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelDesc, setNewChannelDesc] = useState('');
   const initializedRef = useRef(false);
+  // Re-render when any channel's unread state changes
+  const [, forceUpdate] = useState(0);
+  useEffect(() => subscribeUnread(() => forceUpdate(n => n + 1)), []);
 
   useEffect(() => {
     // Seed default channels once on first mount, then subscribe for real-time updates.
@@ -143,12 +147,18 @@ const ChannelList: React.FC<ChannelListProps> = ({ onNavigate, search = '' }) =>
         {filteredChannels.map((channel) => (
           <div
             key={channel.id}
-            className={`channel-item list-item-95 ${isChannelActive(channel.id) ? 'selected' : ''}`}
+            className={`channel-item list-item-95 ${isChannelActive(channel.id) ? 'selected' : ''} ${getUnread(channel.id).unread > 0 && !isChannelActive(channel.id) ? 'has-unread' : ''}`}
             onClick={() => { navigate(`/app/channel/${channel.id}`); onNavigate?.(); }}
             onContextMenu={(e) => handleContextMenu(e, channel)}
           >
             <span className="channel-hash">#</span>
             <span className="channel-name">{channel.name}</span>
+            {!isChannelActive(channel.id) && (() => {
+              const u = getUnread(channel.id);
+              if (u.mentions > 0) return <span className="unread-badge mention-badge">{u.mentions}</span>;
+              if (u.unread > 0) return <span className="unread-dot" />;
+              return null;
+            })()}
           </div>
         ))}
       </div>

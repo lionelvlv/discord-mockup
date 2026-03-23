@@ -34,8 +34,13 @@ const NotificationBell: React.FC<{ onNavigate?: () => void }> = ({ onNavigate })
     if (!n.read) await markNotificationRead(n.id);
     setOpen(false);
     onNavigate?.();
-    if (n.channelId) navigate(`/app/channel/${n.channelId}?highlight=${n.messageId}`);
-    else if (n.dmId) navigate(`/app/dm/${n.dmId}`);
+    if (n.channelId) {
+      navigate(`/app/channel/${n.channelId}?highlight=${n.messageId}`);
+    } else if (n.dmId) {
+      // DM notifications: navigate to the sender's profile page (DM by user ID),
+      // not the composite dmId. fromUserId is the person who mentioned us.
+      navigate(`/app/dm/${n.fromUserId}`);
+    }
   };
 
   const handleClearAll = async () => {

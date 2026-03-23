@@ -146,3 +146,29 @@
   .list-header { font-size: 9px; padding: 10px 12px; min-height: 44px; }
   .create-channel-btn { width: 36px; height: 36px; font-size: 18px; }
 }
+
+/* ── Unread indicators ───────────────────────────────────────────────────── */
+.channel-item.has-unread .channel-name { font-weight: bold; color: var(--text-primary); }
+
+.unread-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.unread-badge {
+  margin-left: auto;
+  min-width: 18px; height: 18px;
+  border-radius: 9px;
+  font-size: 9px; font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.mention-badge {
+  background: #dc3545;
+  color: #fff;
+}

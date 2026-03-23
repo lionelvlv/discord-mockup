@@ -4,11 +4,14 @@ import { db } from '../../config/firebase';
 import { Message } from '../../types/message';
 import { User } from '../../types/user';
 import { soundManager } from '../../lib/sounds';
+import { updateUnread, markRead } from '../../features/chat/unreadStore';
+import { useAuth } from '../../features/auth/useAuth';
 import MessageItem from './MessageItem';
 import './MessageList.css';
 
 interface MessageListProps {
   messages: Message[];
+  channelOrDMId?: string;   // used to track unread state
   highlightMessageId?: string;
   onHighlightClear?: () => void;
 }
@@ -42,7 +45,7 @@ function useSharedUsers() {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-function MessageList({ messages, highlightMessageId, onHighlightClear }: MessageListProps) {
+function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightClear }: MessageListProps) {
   const listRef              = useRef<HTMLDivElement>(null);
   const messageRefs          = useRef<Map<string, HTMLDivElement>>(new Map());
   const prevMessageCount     = useRef(messages.length);
@@ -50,6 +53,41 @@ function MessageList({ messages, highlightMessageId, onHighlightClear }: Message
   const didScrollToHighlight = useRef(false);
   const [flashId, setFlashId] = useState<string | undefined>(undefined);
   const usersById = useSharedUsers();
+  const { user: currentUser } = useAuth();
+
+  // Track last-read timestamp per channel/DM so we can compute unread count
+  const lastReadRef = useRef<number>(Date.now());
+
+  // Mark read when the list is focused/visible and on mount
+  useEffect(() => {
+    if (channelOrDMId) {
+      lastReadRef.current = Date.now();
+      markRead(channelOrDMId);
+    }
+  }, [channelOrDMId]);
+
+  // Update unread store and play sound only on @mention
+  useEffect(() => {
+    if (!currentUser || !channelOrDMId) return;
+
+    const isNewMessage = messages.length > prevMessageCount.current && prevMessageCount.current > 0;
+
+    if (isNewMessage) {
+      // Check if any new messages mention current user
+      const newMsgs = messages.slice(prevMessageCount.current);
+      const hasMention = newMsgs.some(m =>
+        m.senderId !== currentUser.id &&
+        !m.deleted &&
+        m.content?.toLowerCase().includes(`@${currentUser.username?.toLowerCase()}`)
+      );
+      if (hasMention) {
+        soundManager.play('mention', 0.8);
+      }
+    }
+
+    // Always update unread store (drives badges in sidebar)
+    updateUnread(channelOrDMId, messages, currentUser.id, currentUser.username ?? '', lastReadRef.current);
+  }, [messages, currentUser, channelOrDMId]);
 
   // Scroll handling: instant on first load, smooth only for genuinely new messages
   useEffect(() => {
@@ -61,16 +99,13 @@ function MessageList({ messages, highlightMessageId, onHighlightClear }: Message
     const isNewMessage = messages.length > prevMessageCount.current && prevMessageCount.current > 0;
 
     if (isInitialLoad.current) {
-      // Instant jump to bottom — no animation, feels snappy
       list.scrollTop = list.scrollHeight;
       isInitialLoad.current = false;
     } else if (isNewMessage) {
-      // Only smooth-scroll if user is already near the bottom
       const distFromBottom = list.scrollHeight - list.scrollTop - list.clientHeight;
       if (distFromBottom < 200) {
         list.scrollTop = list.scrollHeight;
       }
-      soundManager.play('message', 0.5);
     }
 
     prevMessageCount.current = messages.length;
