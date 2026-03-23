@@ -7,6 +7,7 @@ import { ref as rtdbRef, onValue, off } from 'firebase/database';
 import { db, rtdb } from '../../config/firebase';
 import { User, PresenceStatus } from '../../types/user';
 import Avatar from '../ui/Avatar';
+import ProfilePopup from '../ui/ProfilePopup';
 import PresenceDot from '../ui/PresenceDot';
 import './MemberList.css';
 
@@ -16,91 +17,6 @@ const ONLINE_THRESHOLD_MS = 90_000;  // 90 seconds
 const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
 
 // ── Profile popup ─────────────────────────────────────────────────────────────
-const ProfilePopup: React.FC<{
-  member: User;
-  anchor: { x: number; y: number };
-  isCurrentUser: boolean;
-  onClose: () => void;
-  onDM: () => void;
-}> = ({ member, anchor, isCurrentUser, onClose, onDM }) => {
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose();
-    };
-    // Slight delay so the click that opened it doesn't immediately close it
-    const t = setTimeout(() => document.addEventListener('mousedown', handler), 50);
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', handler); };
-  }, [onClose]);
-
-  // Position: try to show to the left of the right rail, avoid viewport overflow
-  const style: React.CSSProperties = {
-    position: 'fixed',
-    top: Math.min(anchor.y, window.innerHeight - 220),
-    right: window.innerWidth - anchor.x + 8,
-    zIndex: 1000,
-    width: 220,
-  };
-
-  return (
-    <div ref={popupRef} className="profile-popup panel" style={style}>
-      {/* Win98 title bar */}
-      <div className="profile-popup-titlebar">
-        <span className="pixel-font" style={{ fontSize: '7px' }}>USER PROFILE</span>
-        <button className="button-95 profile-popup-close" onClick={onClose}>✕</button>
-      </div>
-
-      {/* Avatar + name */}
-      <div className="profile-popup-hero">
-        <Avatar src={member.avatarUrl} size={52} />
-        <div className="profile-popup-identity">
-          <div className="profile-popup-username">{member.username}</div>
-          <div className="profile-popup-presence">
-            <PresenceDot status={member.presence} />
-            <span>{member.presence ?? 'offline'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bio */}
-      {member.bio && (
-        <div className="profile-popup-bio panel-inset">
-          {member.bio}
-        </div>
-      )}
-      {!member.bio && (
-        <div className="profile-popup-bio profile-popup-bio--empty">No bio set.</div>
-      )}
-
-      {/* DM button (not shown for self) */}
-      {!isCurrentUser && (
-        <button className="button-95 profile-popup-dm-btn" onClick={onDM}>
-          💬 Send Message
-        </button>
-      )}
-    </div>
-  );
-};
-
-// ── MemberList ────────────────────────────────────────────────────────────────
-const MemberList: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
-  const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
-  const [members, setMembers] = useState<User[]>([]);
-  const [profilePopup, setProfilePopup] = useState<{ member: User; x: number; y: number } | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; member: User } | null>(null);
-
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const allUsers = snapshot.docs
-        .map((d) => ({ id: d.id, ...d.data() } as User))
-        .filter((u) => !u.isDeleted);
-      const order: Record<PresenceStatus, number> = { online: 0, idle: 1, offline: 2 };
-      allUsers.sort((a, b) => order[a.presence ?? 'offline'] - order[b.presence ?? 'offline']);
-      setMembers(allUsers);
-    });
     return () => unsub();
   }, []);
 
@@ -253,9 +169,8 @@ const MemberList: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
         <ProfilePopup
           member={profilePopup.member}
           anchor={{ x: profilePopup.x, y: profilePopup.y }}
-          isCurrentUser={profilePopup.member.id === currentUser?.id}
           onClose={() => setProfilePopup(null)}
-          onDM={() => handleDM(profilePopup.member)}
+          onNavigate={onNavigate}
         />
       )}
 
