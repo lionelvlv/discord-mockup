@@ -73,7 +73,7 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
       const hasMention = newMsgs.some(m =>
         m.senderId !== cur.id &&
         !m.deleted &&
-        (isDM || m.content?.toLowerCase().includes(`@${cur.username?.toLowerCase()}`))
+        m.content?.toLowerCase().includes(`@${cur.username?.toLowerCase()}`)
       );
       if (hasMention) soundManager.play('mention', 0.8);
     }

@@ -60,7 +60,8 @@ export function updateUnread(
     if (m.senderId === currentUserId) continue;
     if (m.deleted) continue;
     unread++;
-    if (isDM || m.content?.toLowerCase().includes(`@${lower}`)) {
+    const isExplicitMention = m.content?.toLowerCase().includes(`@${lower}`);
+    if (isExplicitMention) {
       mentions++;
       mentionMessageIds.add(m.id);
     }

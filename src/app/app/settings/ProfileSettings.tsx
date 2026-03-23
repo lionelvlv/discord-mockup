@@ -385,15 +385,19 @@ const ProfileSettings: React.FC = () => {
             {/* Font */}
             <div className="appearance-block">
               <label className="appearance-label">Font</label>
-              <div className="font-list">
+              <select
+                className="input-95"
+                style={{ width: '100%', fontSize: 12, padding: '3px 6px' }}
+                value={theme.fontFamily}
+                onChange={e => {
+                  const f = PRESET_FONTS.find(f => f.family === e.target.value);
+                  if (f) updateTheme({ fontFamily: f.family, fontUrl: '', fontName: f.name });
+                }}
+              >
                 {PRESET_FONTS.map(f => (
-                  <button key={f.name} type="button"
-                    className={`font-item button-95 ${theme.fontFamily===f.family?'active':''}`}
-                    style={{fontFamily:f.family}} onClick={() => updateTheme({fontFamily:f.family,fontUrl:'',fontName:f.name})}>
-                    {f.name}
-                  </button>
+                  <option key={f.name} value={f.family}>{f.name}</option>
                 ))}
-              </div>
+              </select>
               <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap',alignItems:'center'}}>
                 <input className="textarea-95" style={{fontSize:10,padding:'2px 4px',flex:1,minWidth:80}}
                   placeholder="Custom font name…" value={customFontName} onChange={e=>setCustomFontName(e.target.value)} />

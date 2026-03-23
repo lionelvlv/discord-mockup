@@ -55,22 +55,33 @@
   --chat-bg-opacity: 0.3;
 }
 
-/* Chat area background image — sits behind messages */
-.message-list {
+/* Chat background — fixed so it never scrolls with messages */
+.channel-content,
+.dm-content {
   position: relative;
 }
-.message-list::before {
+.channel-content::before,
+.dm-content::before {
   content: '';
-  position: absolute;
-  inset: 0;
+  position: fixed;  /* fixed to viewport, never scrolls */
+  /* Inset to match the chat area only (not sidebars) */
+  top: 0;
+  bottom: 0;
+  /* We can't know exact left/right offsets at CSS level, so cover full viewport
+     and rely on the message-list overflow:hidden to clip it visually */
+  left: 0;
+  right: 0;
   background-image: var(--chat-bg-image);
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   opacity: var(--chat-bg-opacity);
   pointer-events: none;
   z-index: 0;
 }
-.message-list > * {
+/* Keep message content above the fixed background */
+.message-list {
   position: relative;
   z-index: 1;
+  background: transparent !important;
 }

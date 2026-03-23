@@ -3,9 +3,9 @@
   position: absolute;
   bottom: calc(100% + 6px);
   left: 0;
-  width: 380px;
+  width: 340px;
   max-width: calc(100vw - 20px);
-  max-height: 500px;
+  max-height: 460px;
   display: flex;
   flex-direction: column;
   z-index: 200;
@@ -63,15 +63,20 @@
 /* ── Category quick-picks ─────────────────────────────────────────────────── */
 .gif-category-bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
-  padding: 6px 8px;
+  padding: 5px 8px;
   border-bottom: 2px inset var(--border-dark);
   flex-shrink: 0;
   background: var(--surface-2);
-  max-height: 72px;
-  overflow-y: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
 }
+.gif-category-bar::-webkit-scrollbar { height: 4px; }
+.gif-category-bar::-webkit-scrollbar-thumb { background: var(--border-dark); }
 
 .gif-category-btn {
   font-size: 9px;
