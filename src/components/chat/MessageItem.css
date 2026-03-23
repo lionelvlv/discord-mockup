@@ -363,7 +363,7 @@
   filter: saturate(0.9) contrast(1.03);
 }
 
-/* Reaction picker anchors to the 😊 button — floats up and to the left */
+/* Reaction picker anchors to the 😊 button */
 .reaction-picker-anchor {
   position: absolute;
   bottom: calc(100% + 4px);
@@ -371,7 +371,36 @@
   z-index: 300;
 }
 
-/* When inside the reaction anchor, the picker opens upward from bottom-right */
+/* On mobile: anchor left instead of right, and constrain width */
+@media (max-width: 768px) {
+  .reaction-picker-anchor {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    /* If near bottom of screen, flip to open downward */
+    bottom: calc(100% + 4px);
+  }
+
+  .reaction-picker-anchor .emoji-picker {
+    position: static;
+    width: 85vw;
+    max-width: 340px;
+    max-height: 300px;
+  }
+
+  .reaction-picker-anchor .emoji-grid {
+    grid-template-columns: repeat(6, 1fr);
+    max-height: 160px;
+  }
+
+  .reaction-picker-anchor .emoji-tab-btn {
+    width: 24px;
+    height: 22px;
+    font-size: 13px;
+  }
+}
+
+/* When inside reaction anchor, picker is static (anchor handles position) */
 .reaction-picker-anchor .emoji-picker {
   position: static;
   width: 320px;
@@ -385,30 +414,6 @@
   object-fit: contain;
   vertical-align: middle;
   margin-right: 2px;
-}
-
-/* Mobile reaction picker — smaller, shifts left to stay in viewport */
-@media (max-width: 768px) {
-  .reaction-picker-anchor {
-    right: auto;
-    left: 0;
-  }
-
-  .reaction-picker-anchor .emoji-picker {
-    width: 280px;
-    max-width: calc(100vw - 16px);
-    max-height: 320px;
-  }
-
-  .reaction-picker-anchor .emoji-grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
-
-  .reaction-picker-anchor .emoji-tab-btn {
-    width: 24px;
-    height: 22px;
-    font-size: 13px;
-  }
 }
 
 /* ── Inline editing ─────────────────────────────────────────────────────────── */

@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   background: var(--surface-2);
+  overflow: hidden;
 }
 
 .channel-content {
@@ -10,6 +11,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .channel-error {
@@ -22,11 +24,6 @@
   .channel-page {
     height: 100%;
     max-height: 100%;
-    overflow: hidden;
   }
-  .channel-content {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
+  .channel-content { flex: 1; min-height: 0; overflow: hidden; }
 }

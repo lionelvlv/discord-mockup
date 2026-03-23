@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   background: var(--surface-2);
+  overflow: hidden;
 }
 
 .dm-content {
@@ -10,6 +11,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .dm-error {
@@ -26,9 +28,14 @@
   color: #800000;
   text-align: center;
   margin: 4px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
-  .dm-page { height: 100dvh; }
-  .dm-content { flex: 1; min-height: 0; }
+  .dm-page {
+    /* Fill the grid cell exactly — no dvh here, that fights with App.css */
+    height: 100%;
+    max-height: 100%;
+  }
+  .dm-content { flex: 1; min-height: 0; overflow: hidden; }
 }
