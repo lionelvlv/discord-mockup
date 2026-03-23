@@ -12,17 +12,23 @@ import MessageComposer from '../../../components/chat/MessageComposer';
 import TypingIndicator from '../../../components/chat/TypingIndicator';
 import './channel.css';
 
+// Module-level cache: remembers the last messages for each channel so switching
+// back to a previously-viewed channel shows content instantly while Firestore
+// re-subscribes in the background.
+const messageCache = new Map<string, Message[]>();
+
 const ChannelPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightMessageId = searchParams.get('highlight') ?? undefined;
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => messageCache.get(channelId ?? '') ?? []);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [channel, setChannel] = useState<Channel | null>(null);
   const [resolvedId, setResolvedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // If we have cached messages, skip the loading state — feel instant
+  const [loading, setLoading] = useState(() => !messageCache.has(channelId ?? ''));
 
   // Resolve the channel — first try as a Firestore document ID, then fall back to
   // a name lookup. Once resolved we subscribe to the doc for live edits.
@@ -92,6 +98,7 @@ const ChannelPage: React.FC = () => {
     if (!resolvedId) return;
 
     const unsubscribe = subscribeToChannelMessages(resolvedId, (msgs) => {
+      messageCache.set(resolvedId, msgs);
       setMessages(msgs);
     });
 

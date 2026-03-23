@@ -257,6 +257,11 @@ export async function searchChannelMessages(
   const q = queryStr.toLowerCase().trim();
   const results: SearchResult[] = [];
 
+  // Load users once for username lookup
+  const usersSnap = await getDocs(collection(db, 'users'));
+  const usernameById = new Map<string, string>();
+  usersSnap.docs.forEach(d => usernameById.set(d.id, d.data().username ?? 'Unknown'));
+
   // Fan out — fetch last 200 messages per channel in parallel
   await Promise.all(
     channels.map(async (ch) => {
@@ -278,7 +283,7 @@ export async function searchChannelMessages(
             channelName: ch.name,
             content: data.content,
             senderId: data.senderId ?? '',
-            senderName: data.senderName ?? data.senderId ?? 'Unknown',
+            senderName: usernameById.get(data.senderId) ?? data.senderId ?? 'Unknown',
             timestamp: data.timestamp ?? 0,
           });
         }
@@ -286,7 +291,6 @@ export async function searchChannelMessages(
     })
   );
 
-  // Sort newest first, cap at 50 results
   results.sort((a, b) => b.timestamp - a.timestamp);
   return results.slice(0, 50);
 }
