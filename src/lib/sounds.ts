@@ -1,133 +1,84 @@
+// SoundManager — all sounds generated via Web Audio API.
+// AudioContext is created lazily on first user interaction to satisfy mobile browser policies.
+
 class SoundManager {
-  private sounds: Map<string, HTMLAudioElement> = new Map();
-  private enabled: boolean = true;
+  private enabled = true;
+  private audioCtx: AudioContext | null = null;
+  private soundBuffers = new Map<string, AudioBuffer>();
+  private ready = false;
 
-  constructor() {
-    // Create sound effects using Web Audio API
-    this.initializeSounds();
-  }
-
-  private initializeSounds() {
-    // Join call sound (rising tone)
-    this.sounds.set('join', this.createTone([400, 600], 0.2));
-    
-    // Leave call sound (falling tone)
-    this.sounds.set('leave', this.createTone([600, 400], 0.2));
-    
-    // Message received (gentle ding) - no longer auto-played, kept for compatibility
-    this.sounds.set('message', this.createTone([800], 0.1));
-    
-    // Mention sound (two-tone ping, more attention-grabbing)
-    this.sounds.set('mention', this.createTone([900, 1100], 0.25));
-    
-    // Video/Screen share on (quick chirp)
-    this.sounds.set('video-on', this.createTone([500, 700], 0.15));
-    
-    // Video/Screen share off (quick descend)
-    this.sounds.set('video-off', this.createTone([700, 500], 0.15));
-  }
-
-  private createTone(frequencies: number[], duration: number): HTMLAudioElement {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const sampleRate = audioContext.sampleRate;
-    const numSamples = sampleRate * duration;
-    const buffer = audioContext.createBuffer(1, numSamples, sampleRate);
-    const data = buffer.getChannelData(0);
-
-    const segmentLength = numSamples / frequencies.length;
-
-    for (let i = 0; i < numSamples; i++) {
-      const segmentIndex = Math.floor(i / segmentLength);
-      const frequency = frequencies[Math.min(segmentIndex, frequencies.length - 1)];
-      const fade = 1 - (i / numSamples); // Fade out
-      data[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.3 * fade;
-    }
-
-    // Convert buffer to audio element
-    const offlineContext = new OfflineAudioContext(1, numSamples, sampleRate);
-    const source = offlineContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(offlineContext.destination);
-    source.start();
-
-    const audio = new Audio();
-    
-    offlineContext.startRendering().then((renderedBuffer) => {
-      const wav = this.bufferToWave(renderedBuffer);
-      const blob = new Blob([wav], { type: 'audio/wav' });
-      audio.src = URL.createObjectURL(blob);
-    });
-
-    return audio;
-  }
-
-  private bufferToWave(buffer: AudioBuffer): ArrayBuffer {
-    const length = buffer.length * buffer.numberOfChannels * 2 + 44;
-    const arrayBuffer = new ArrayBuffer(length);
-    const view = new DataView(arrayBuffer);
-    const channels: Float32Array[] = [];
-    let offset = 0;
-    let pos = 0;
-
-    // Write WAV header
-    const setUint16 = (data: number) => {
-      view.setUint16(pos, data, true);
-      pos += 2;
-    };
-    const setUint32 = (data: number) => {
-      view.setUint32(pos, data, true);
-      pos += 4;
-    };
-
-    setUint32(0x46464952); // "RIFF"
-    setUint32(length - 8);
-    setUint32(0x45564157); // "WAVE"
-    setUint32(0x20746d66); // "fmt "
-    setUint32(16);
-    setUint16(1);
-    setUint16(buffer.numberOfChannels);
-    setUint32(buffer.sampleRate);
-    setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels);
-    setUint16(buffer.numberOfChannels * 2);
-    setUint16(16);
-    setUint32(0x61746164); // "data"
-    setUint32(length - pos - 4);
-
-    // Write audio data
-    for (let i = 0; i < buffer.numberOfChannels; i++) {
-      channels.push(buffer.getChannelData(i));
-    }
-
-    while (pos < length) {
-      for (let i = 0; i < buffer.numberOfChannels; i++) {
-        const sample = Math.max(-1, Math.min(1, channels[i][offset]));
-        view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
-        pos += 2;
+  // Lazily get/create the AudioContext after a user gesture
+  private getCtx(): AudioContext | null {
+    if (this.audioCtx && this.audioCtx.state !== 'closed') return this.audioCtx;
+    try {
+      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!this.ready) {
+        this.ready = true;
+        this.buildBuffers(this.audioCtx);
       }
-      offset++;
+      return this.audioCtx;
+    } catch {
+      return null;
     }
-
-    return arrayBuffer;
   }
 
-  play(soundName: string, volume: number = 1) {
+  // Pre-build all buffers once we have a context
+  private buildBuffers(ctx: AudioContext) {
+    const defs: Record<string, { freqs: number[]; duration: number; vol: number }> = {
+      join:      { freqs: [400, 600], duration: 0.20, vol: 0.35 },
+      leave:     { freqs: [600, 400], duration: 0.20, vol: 0.35 },
+      mention:   { freqs: [900, 1200], duration: 0.18, vol: 0.5 },
+      'video-on':  { freqs: [500, 700], duration: 0.15, vol: 0.3 },
+      'video-off': { freqs: [700, 500], duration: 0.15, vol: 0.3 },
+    };
+    Object.entries(defs).forEach(([name, { freqs, duration, vol }]) => {
+      const sr      = ctx.sampleRate;
+      const n       = Math.ceil(sr * duration);
+      const buf     = ctx.createBuffer(1, n, sr);
+      const data    = buf.getChannelData(0);
+      const segLen  = n / freqs.length;
+      for (let i = 0; i < n; i++) {
+        const seg  = Math.min(Math.floor(i / segLen), freqs.length - 1);
+        const fade = 1 - i / n;
+        data[i] = Math.sin(2 * Math.PI * freqs[seg] * i / sr) * vol * fade;
+      }
+      this.soundBuffers.set(name, buf);
+    });
+  }
+
+  // Must be called from a user-gesture handler (click, keydown, touchend) to
+  // unlock audio on iOS/Android. Safe to call multiple times.
+  unlock() {
+    const ctx = this.getCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+  }
+
+  play(soundName: string, volume = 1) {
     if (!this.enabled) return;
-    
-    const sound = this.sounds.get(soundName);
-    if (sound) {
-      const clone = sound.cloneNode() as HTMLAudioElement;
-      clone.volume = Math.min(1, Math.max(0, volume));
-      clone.play().catch(err => console.log('Sound play failed:', err));
-    }
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+    const buf = this.soundBuffers.get(soundName);
+    if (!buf) return;
+    try {
+      const src  = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      src.buffer = buf;
+      gain.gain.value = Math.min(1, Math.max(0, volume));
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start();
+    } catch { /* audio unavailable */ }
   }
 
-  setEnabled(enabled: boolean) {
-    this.enabled = enabled;
-  }
-
-  isEnabled(): boolean {
-    return this.enabled;
-  }
+  setEnabled(enabled: boolean) { this.enabled = enabled; }
+  isEnabled() { return this.enabled; }
 }
 
 export const soundManager = new SoundManager();
+
+// Unlock audio on first user interaction — call this once in main.tsx or App
+export function unlockAudio() {
+  soundManager.unlock();
+}

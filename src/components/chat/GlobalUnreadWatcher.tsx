@@ -49,10 +49,12 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
         initialisedIds.current.add(id);
         prevCounts.current[id] = msgs.length;
 
-        // If this is the active channel, mark it read and skip badge
+        // If this is the active channel, update last-read but don't wipe mention IDs —
+        // IntersectionObserver in MessageList clears individual mentions as they're seen.
         if (id === _activeId) {
           saveLastRead(id);
-          markRead(id);
+          // Still update the unread store with latest data so badge stays at 0 for new msgs
+          updateUnread(id, msgs, uid, user.username ?? '', Date.now(), isDM);
           return;
         }
 
@@ -94,7 +96,7 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
         where('deleted', '==', false),
         orderBy('timestamp', 'desc'),
         limit(50)
-      ));
+      ), true);
     });
 
     return () => unsubs.forEach(u => u());

@@ -6,9 +6,16 @@ import SignupPage from './app/signup/SignupPage';
 import ForgotPasswordPage from './app/forgot-password/ForgotPasswordPage';
 import AppLayout from './app/app/AppLayout';
 import { AuthProvider, useAuth } from './features/auth/useAuth';
+import { unlockAudio } from './lib/sounds';
 import './styles/globals.css';
 import './styles/theme.css';
 import './styles/retro-effects.css';
+
+// Unlock Web Audio on first user interaction (required by mobile browsers)
+const _unlock = () => { unlockAudio(); document.removeEventListener('click', _unlock); document.removeEventListener('keydown', _unlock); document.removeEventListener('touchend', _unlock); };
+document.addEventListener('click', _unlock);
+document.addEventListener('keydown', _unlock);
+document.addEventListener('touchend', _unlock);
 
 // IMPORTANT: these must be defined OUTSIDE App() so React doesn't treat them
 // as new component types on every render (which would unmount+remount the entire

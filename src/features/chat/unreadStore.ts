@@ -29,8 +29,10 @@ export function getUnread(id: string): { unread: number; mentions: number; menti
 }
 
 export function markRead(id: string) {
-  if (!data[id] && !data[id]) return;
-  data = { ...data, [id]: { unread: 0, mentions: 0, mentionMessageIds: new Set() } };
+  const e = data[id];
+  if (!e) return;
+  // Keep mentionMessageIds so IntersectionObserver can still decrement-on-seen
+  data = { ...data, [id]: { unread: 0, mentions: 0, mentionMessageIds: e.mentionMessageIds } };
   notify();
 }
 
