@@ -4,6 +4,7 @@
   grid-template-columns: var(--left-rail-width) 1fr var(--right-rail-width);
   grid-template-rows: 1fr;
   height: 100dvh;
+  height: var(--app-height, 100dvh); /* iOS keyboard override via JS */
   width: 100vw;
   background: var(--surface-1);
   overflow: hidden;
@@ -45,9 +46,10 @@
     grid-template-columns: 1fr;
     grid-template-rows: 1fr var(--mobile-nav-height, 52px);
     position: relative;
-    /* Prevent the keyboard from scrolling the layout — content shrinks instead */
     height: 100dvh;
+    height: var(--app-height, 100dvh);
     max-height: 100dvh;
+    max-height: var(--app-height, 100dvh);
     overflow: hidden;
   }
 
@@ -241,31 +243,46 @@
 }
 
 /* ── Mobile keyboard fix ─────────────────────────────────────────────────── */
-/* Prevent the soft keyboard from scrolling/resizing the layout.
-   The message-list flex:1 shrinks naturally; composer stays at bottom. */
+/* iOS 12 opens the keyboard BELOW the viewport, pushing content up.
+   Strategy: pin the layout to the visual viewport height via JS (see main.tsx),
+   and ensure overflow is strictly contained so nothing scrolls except message-list. */
 @media (max-width: 768px) {
-  /* Each page (channel/DM) must be an exact-height flex column */
+  /* The grid cell sections must never overflow */
+  .main-section {
+    overflow: hidden;
+    /* Height is set by the JS viewport watcher on iOS */
+  }
+
   .channel-page,
   .dm-page {
     height: 100%;
     max-height: 100%;
-    flex: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
 
-  /* Message list gets all remaining space and scrolls internally */
+  .channel-content,
+  .dm-content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
   .message-list {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
   }
 
-  /* Composer stays at its natural height, never pushed */
   .message-composer {
     flex-shrink: 0;
+    /* Prevent composer from being pushed by keyboard */
+    position: relative;
+    z-index: 1;
   }
 }

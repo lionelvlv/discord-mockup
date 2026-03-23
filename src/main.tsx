@@ -11,6 +11,20 @@ import './styles/globals.css';
 import './styles/theme.css';
 import './styles/retro-effects.css';
 
+// iOS keyboard fix: when the virtual keyboard opens, window.innerHeight doesn't
+// change but visualViewport.height does. Pin the app-layout to the visual viewport
+// height so the keyboard doesn't push content up or leave blank space.
+function applyViewportHeight() {
+  const vh = window.visualViewport?.height ?? window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', `${vh}px`);
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', applyViewportHeight);
+  window.visualViewport.addEventListener('scroll', applyViewportHeight);
+}
+window.addEventListener('resize', applyViewportHeight);
+applyViewportHeight();
+
 // Unlock Web Audio on first user interaction (required by mobile browsers)
 const _unlock = () => { unlockAudio(); document.removeEventListener('click', _unlock); document.removeEventListener('keydown', _unlock); document.removeEventListener('touchend', _unlock); };
 document.addEventListener('click', _unlock);
