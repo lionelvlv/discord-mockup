@@ -9,23 +9,35 @@ import { User, PresenceStatus } from '../../types/user';
 import Avatar from '../ui/Avatar';
 import ProfilePopup from '../ui/ProfilePopup';
 import PresenceDot from '../ui/PresenceDot';
+import { getUnread, subscribeUnread } from '../../features/chat/unreadStore';
 import './MemberList.css';
 
-// ONLINE_THRESHOLD: if lastSeen is older than this, the user is considered offline
-// even if their Firestore doc still says online (e.g. phone was killed)
-const ONLINE_THRESHOLD_MS = 90_000;  // 90 seconds
-const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
+const ONLINE_THRESHOLD_MS = 90_000;
+const IDLE_THRESHOLD_MS   = 300_000;
 
-// ── Profile popup ─────────────────────────────────────────────────────────────
+const MemberList: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const [members, setMembers] = useState<User[]>([]);
+  const [profilePopup, setProfilePopup] = useState<{ member: User; x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; member: User } | null>(null);
+  const [, forceUpdate] = useState(0);
+  useEffect(() => subscribeUnread(() => forceUpdate(n => n + 1)), []);
+
+  // Subscribe to Firestore users
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const allUsers = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() } as User))
+        .filter((u) => !u.isDeleted);
+      const order: Record<PresenceStatus, number> = { online: 0, idle: 1, offline: 2 };
+      allUsers.sort((a, b) => order[a.presence ?? 'offline'] - order[b.presence ?? 'offline']);
+      setMembers(allUsers);
+    });
     return () => unsub();
   }, []);
 
-  // RTDB presence watcher: subscribe to the top-level /presence node and
-  // reconcile each user's lastSeen against the current time.
-  // This is the only reliable way to detect killed mobile apps / power-off:
-  // onDisconnect removes the RTDB node, which fires this listener with null
-  // for that user. We then immediately write 'offline' to their Firestore doc.
-  // A periodic sweep also catches any users whose lastSeen has aged out.
+  // RTDB presence watcher — detects killed mobile apps / power-off
   useEffect(() => {
     const allPresenceRef = rtdbRef(rtdb, 'presence');
 
@@ -36,34 +48,24 @@ const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
     const handler = onValue(allPresenceRef, (snap) => {
       const now  = Date.now();
       const data = snap.val() ?? {};
-
-      // Check every user we know about
       members.forEach(member => {
-        if (!member.id || member.id === currentUser?.id) return; // own status managed by useAuth
+        if (!member.id || member.id === currentUser?.id) return;
         const entry = data[member.id];
         if (!entry || !entry.online || !entry.lastSeen) {
-          // RTDB node removed (onDisconnect fired) or never set → offline
           if (member.presence !== 'offline') markStatus(member.id, 'offline');
           return;
         }
         const age = now - entry.lastSeen;
         const expected: PresenceStatus = age < ONLINE_THRESHOLD_MS ? 'online'
-          : age < IDLE_THRESHOLD_MS   ? 'idle'
-          : 'offline';
+          : age < IDLE_THRESHOLD_MS ? 'idle' : 'offline';
         if (expected !== member.presence) markStatus(member.id, expected);
       });
     });
 
-    // Also run a sweep every 60s to catch users whose lastSeen has aged out
-    // even without a new RTDB event
     const sweep = setInterval(() => {
       const now = Date.now();
-      // Re-read from the snapshot handler's data — already subscribed above
-      // so just trigger a re-check using the members state
       members.forEach(member => {
         if (!member.id || member.id === currentUser?.id) return;
-        // If marked online/idle but we haven't seen a RTDB update, check age
-        // via a one-time read
         const memberRef = rtdbRef(rtdb, `presence/${member.id}`);
         onValue(memberRef, (snap) => {
           const entry = snap.val();
@@ -75,7 +77,7 @@ const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
           const expected: PresenceStatus = age < ONLINE_THRESHOLD_MS ? 'online'
             : age < IDLE_THRESHOLD_MS ? 'idle' : 'offline';
           if (expected !== member.presence) markStatus(member.id, expected);
-          off(memberRef); // one-time read
+          off(memberRef);
         }, { onlyOnce: true });
       });
     }, 60_000);
@@ -95,7 +97,6 @@ const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
 
   const handleMemberClick = (e: React.MouseEvent, member: User) => {
     e.stopPropagation();
-    // Toggle popup
     if (profilePopup?.member.id === member.id) {
       setProfilePopup(null);
     } else {
@@ -123,12 +124,6 @@ const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
     setContextMenu(null);
   };
 
-  const handleDM = (member: User) => {
-    setProfilePopup(null);
-    onNavigate?.();
-    navigate(`/app/dm/${member.id}`);
-  };
-
   const onlineMembers  = members.filter((m) => m.presence === 'online');
   const offlineMembers = members.filter((m) => m.presence !== 'online');
 
@@ -142,7 +137,12 @@ const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
     >
       <Avatar src={member.avatarUrl} size={24} />
       <span className="member-username">{member.username}</span>
-      <PresenceDot status={member.presence} />
+      {(() => {
+        const u = getUnread(member.id);
+        if (u.mentions > 0) return <span className="unread-badge mention-badge">{u.mentions}</span>;
+        if (u.unread > 0) return <span className="unread-dot" />;
+        return <PresenceDot status={member.presence} />;
+      })()}
     </div>
   );
 
@@ -164,7 +164,6 @@ const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
         )}
       </div>
 
-      {/* Profile popup */}
       {profilePopup && (
         <ProfilePopup
           member={profilePopup.member}
@@ -174,7 +173,6 @@ const IDLE_THRESHOLD_MS   = 300_000; // 5 minutes
         />
       )}
 
-      {/* Admin context menu */}
       {contextMenu && (
         <div className="context-menu panel" style={{ left: contextMenu.x, top: contextMenu.y }}>
           <div className="context-item" onClick={() => handleDeleteUser(contextMenu.member)}>
