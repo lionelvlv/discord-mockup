@@ -59,6 +59,47 @@ const ProfileSettings: React.FC = () => {
   const [saving, setSaving]             = useState(false);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
 
+  // ── Theme / appearance state ────────────────────────────────────────────
+  const [theme, setTheme]             = useState<Theme>(getTheme);
+  const [bgPreview, setBgPreview]     = useState(() => getTheme().bgImageUrl);
+  const [customFontName, setCustomFontName] = useState('');
+
+  const updateTheme = (patch: Partial<Theme>) => {
+    setTheme(prev => { const next = { ...prev, ...patch }; applyTheme(next); return next; });
+  };
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Max 5MB'); return; }
+    const r = new FileReader();
+    r.onload = ev => { const url = ev.target?.result as string; setBgPreview(url); updateTheme({ bgImageUrl: url }); };
+    r.readAsDataURL(file); e.target.value = '';
+  };
+
+  const handleFontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    if (file.size > 3 * 1024 * 1024) { alert('Max 3MB'); return; }
+    const r = new FileReader();
+    r.onload = ev => {
+      const dataUrl = ev.target?.result as string;
+      const name = customFontName.trim() || file.name.replace(/\.[^.]+$/, '');
+      let s = document.getElementById('custom-theme-font') as HTMLStyleElement | null;
+      if (!s) { s = document.createElement('style'); s.id = 'custom-theme-font'; document.head.appendChild(s); }
+      s.textContent = `@font-face { font-family: '${name}'; src: url('${dataUrl}'); }`;
+      updateTheme({ fontFamily: `'${name}', sans-serif`, fontUrl: dataUrl, fontName: name });
+    };
+    r.readAsDataURL(file); e.target.value = '';
+  };
+
+  const PRESETS = [
+    { name: 'Win98',  colorSurface1:'#c0c0c0', colorSurface2:'#dfdfdf', colorAccent:'#000080', colorText:'#000000', colorTitlebar:'#0a246a' },
+    { name: 'Dark',   colorSurface1:'#2c2f33', colorSurface2:'#36393f', colorAccent:'#7289da', colorText:'#dcddde', colorTitlebar:'#4752c4' },
+    { name: 'Rose',   colorSurface1:'#f5e6e8', colorSurface2:'#fdf2f3', colorAccent:'#c94060', colorText:'#2d1b1e', colorTitlebar:'#a03050' },
+    { name: 'Forest', colorSurface1:'#d4e0c8', colorSurface2:'#e8f0e0', colorAccent:'#2d6a3f', colorText:'#1a2e1e', colorTitlebar:'#1d4d2e' },
+    { name: 'Ocean',  colorSurface1:'#c8d8e8', colorSurface2:'#e0ecf6', colorAccent:'#1a5276', colorText:'#0d1f2d', colorTitlebar:'#154360' },
+    { name: 'Dusk',   colorSurface1:'#2a1a3e', colorSurface2:'#3d2957', colorAccent:'#9b59b6', colorText:'#e8d5f0', colorTitlebar:'#6c2c8e' },
+  ];
+
   // ── Custom emoji state ──────────────────────────────────────────────────
   const [myEmojis, setMyEmojis]         = useState<CustomEmoji[]>([]);
   const [emojiName, setEmojiName]       = useState('');
