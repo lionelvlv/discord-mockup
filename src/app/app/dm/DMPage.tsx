@@ -137,7 +137,7 @@ const DMPage: React.FC = () => {
         description={isDeleted ? '⚠️ This user has been deleted' : (displayUser.bio || 'Direct message')}
       />
       <div className="dm-content">
-        <MessageList messages={messages} channelOrDMId={dmId || undefined} />
+        <MessageList messages={messages} channelOrDMId={userId || undefined} />
         <TypingIndicator userIds={typingUsers} />
         {!isDeleted && <MessageComposer onSend={handleSendMessage} dmId={dmId} />}
         {isDeleted && (

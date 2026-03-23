@@ -11,18 +11,40 @@ import './styles/globals.css';
 import './styles/theme.css';
 import './styles/retro-effects.css';
 
-// iOS keyboard fix: when the virtual keyboard opens, window.innerHeight doesn't
-// change but visualViewport.height does. Pin the app-layout to the visual viewport
-// height so the keyboard doesn't push content up or leave blank space.
+// iOS keyboard fix:
+// When the keyboard opens on iOS, the browser scrolls window.scrollY upward
+// (to keep the focused input visible) AND shrinks visualViewport.height.
+// We counteract both:
+//   1. Set --app-height to visualViewport.height so the layout shrinks correctly
+//   2. On every viewport change, scroll window back to 0 so there's no blank space
 function applyViewportHeight() {
-  const vh = window.visualViewport?.height ?? window.innerHeight;
+  const vvp = window.visualViewport;
+  const vh  = vvp ? vvp.height : window.innerHeight;
   document.documentElement.style.setProperty('--app-height', `${vh}px`);
+  // Kill any scroll offset the browser introduced (iOS does this when keyboard opens)
+  if (window.scrollY !== 0) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
 }
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', applyViewportHeight);
   window.visualViewport.addEventListener('scroll', applyViewportHeight);
 }
 window.addEventListener('resize', applyViewportHeight);
+// Also reset scroll whenever any input/textarea gets focus (keyboard about to open)
+document.addEventListener('focusin', (e) => {
+  const tag = (e.target as HTMLElement).tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+    // Delay slightly so the keyboard has started opening
+    setTimeout(() => {
+      applyViewportHeight();
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }, 100);
+    setTimeout(applyViewportHeight, 400); // second pass after keyboard fully open
+  }
+});
+document.addEventListener('focusout', () => {
+  // Keyboard closed — restore full height
+  setTimeout(applyViewportHeight, 100);
+});
 applyViewportHeight();
 
 // Unlock Web Audio on first user interaction (required by mobile browsers)

@@ -42,6 +42,14 @@
 
 /* ── Mobile layout (< 768px) ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* iOS: fix body so keyboard can't scroll the document */
+  html, body, #root {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    height: var(--app-height, 100%);
+    overflow: hidden;
+  }
+
   .app-layout {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr var(--mobile-nav-height, 52px);
