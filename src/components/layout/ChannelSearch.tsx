@@ -1,9 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-
-// Module-level search cache: keyed by query string, stores results + timestamp
-// Avoids re-hitting Firestore for the same query within 2 minutes
-const searchCache = new Map<string, { results: SearchResult[]; ts: number }>();
-const SEARCH_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -11,9 +6,12 @@ import { Channel } from '../../types/channel';
 import { searchChannelMessages, SearchResult, searchDMMessages, DMSearchResult } from '../../features/chat/api';
 import { useAuth } from '../../features/auth/useAuth';
 import { formatTime } from '../../lib/time';
-import { formatTime } from '../../lib/time';
 import './ChannelSearch.css';
 
+// Module-level search cache: keyed by query string, stores results + timestamp
+// Avoids re-hitting Firestore for the same query within 2 minutes
+const searchCache = new Map<string, { results: SearchResult[]; ts: number }>();
+const SEARCH_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 interface Props {
   onNavigate?: () => void;
 }
