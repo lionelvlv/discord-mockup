@@ -9,6 +9,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import ChannelHeader from '../../../components/layout/ChannelHeader';
 import { setGlobalActiveId, saveLastRead } from '../../../components/chat/GlobalUnreadWatcher';
+import { markRead } from '../../../features/chat/unreadStore';
 import MessageList from '../../../components/chat/MessageList';
 import MessageComposer from '../../../components/chat/MessageComposer';
 import TypingIndicator from '../../../components/chat/TypingIndicator';
@@ -33,10 +34,9 @@ const DMPage: React.FC = () => {
   useEffect(() => {
     if (!userId || !currentUser) return;
     setGlobalActiveId(userId);
-    saveLastRead(userId);
-    // Mark all notifications from this user as read
+    markRead(userId); // instant badge clear
     markNotificationsReadForChannel(currentUser.id, undefined, userId).catch(() => {});
-    return () => setGlobalActiveId(null);
+    return () => { setGlobalActiveId(null); };
   }, [userId, currentUser?.id]);
 
   // Subscribe to the other user's Firestore doc in real-time.

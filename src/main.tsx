@@ -7,6 +7,7 @@ import ForgotPasswordPage from './app/forgot-password/ForgotPasswordPage';
 import AppLayout from './app/app/AppLayout';
 import { AuthProvider, useAuth } from './features/auth/useAuth';
 import { unlockAudio } from './lib/sounds';
+import './features/theme/themeStore'; // initializes theme from localStorage on load
 import './styles/globals.css';
 import './styles/theme.css';
 import './styles/retro-effects.css';

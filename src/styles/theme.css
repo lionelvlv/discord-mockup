@@ -47,3 +47,30 @@
   --shadow-md: 2px 2px 4px rgba(0, 0, 0, 0.3);
   --shadow-lg: 4px 4px 8px rgba(0, 0, 0, 0.3);
 }
+/* ── Theme variables (overridden by JS) ─────────────────────────────────── */
+:root {
+  --theme-titlebar: #0a246a;
+  --theme-font: 'MS Sans Serif', Tahoma, Arial, sans-serif;
+  --chat-bg-image: none;
+  --chat-bg-opacity: 0.3;
+}
+
+/* Chat area background image — sits behind messages */
+.message-list {
+  position: relative;
+}
+.message-list::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--chat-bg-image);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--chat-bg-opacity);
+  pointer-events: none;
+  z-index: 0;
+}
+.message-list > * {
+  position: relative;
+  z-index: 1;
+}

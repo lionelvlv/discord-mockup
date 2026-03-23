@@ -8,6 +8,7 @@ import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'fire
 import { db } from '../../../config/firebase';
 import ChannelHeader from '../../../components/layout/ChannelHeader';
 import { setGlobalActiveId, saveLastRead } from '../../../components/chat/GlobalUnreadWatcher';
+import { markRead } from '../../../features/chat/unreadStore';
 import MessageList from '../../../components/chat/MessageList';
 import MessageComposer from '../../../components/chat/MessageComposer';
 import TypingIndicator from '../../../components/chat/TypingIndicator';
@@ -34,10 +35,10 @@ const ChannelPage: React.FC = () => {
   // Tell the global watcher which channel is active and clear its notifications
   useEffect(() => {
     if (!resolvedId || !user) return;
-    setGlobalActiveId(resolvedId);
-    saveLastRead(resolvedId);
+    setGlobalActiveId(resolvedId); // also calls saveLastRead internally
+    markRead(resolvedId); // instant badge clear
     markNotificationsReadForChannel(user.id, resolvedId).catch(() => {});
-    return () => setGlobalActiveId(null);
+    return () => { setGlobalActiveId(null); };
   }, [resolvedId, user?.id]);
 
   // Resolve the channel — first try as a Firestore document ID, then fall back to

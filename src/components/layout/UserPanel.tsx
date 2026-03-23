@@ -5,6 +5,7 @@ import { User } from '../../types/user';
 import Avatar from '../ui/Avatar';
 import PresenceDot from '../ui/PresenceDot';
 import './UserPanel.css';
+import UserSettings from './UserSettings';
 
 interface UserPanelProps {
   user: User;
@@ -15,6 +16,7 @@ const UserPanel: React.FC<UserPanelProps> = ({ user, onNavigate }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
 
   const handleSettings = () => {
     setShowMenu(false);
@@ -47,6 +49,11 @@ const UserPanel: React.FC<UserPanelProps> = ({ user, onNavigate }) => {
       <div className="user-actions">
         <button
           className="icon-button button-95"
+          onClick={() => setShowAppearance(true)}
+          title="Appearance"
+        >🎨</button>
+        <button
+          className="icon-button button-95"
           onClick={handleSettings}
           title="Settings"
         >
@@ -74,6 +81,7 @@ const UserPanel: React.FC<UserPanelProps> = ({ user, onNavigate }) => {
       )}
     </div>
   );
+
 };
 
 export default UserPanel;
