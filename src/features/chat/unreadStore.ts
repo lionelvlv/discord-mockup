@@ -59,8 +59,11 @@ export function updateUnread(
     if (m.timestamp <= lastReadTimestamp) continue;
     if (m.senderId === currentUserId) continue;
     if (m.deleted) continue;
-    unread++;
     const isExplicitMention = m.content?.toLowerCase().includes(`@${lower}`);
+    // For DMs: only count as unread if it's an explicit @mention
+    // For channels: every unread message counts
+    if (isDM && !isExplicitMention) continue;
+    unread++;
     if (isExplicitMention) {
       mentions++;
       mentionMessageIds.add(m.id);

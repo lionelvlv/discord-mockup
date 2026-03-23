@@ -57,18 +57,17 @@
 
 /* Chat background — fixed so it never scrolls with messages */
 .channel-content,
-.dm-content {
+.dm-content,
+.voice-panel {
   position: relative;
 }
 .channel-content::before,
-.dm-content::before {
+.dm-content::before,
+.voice-panel::before {
   content: '';
-  position: fixed;  /* fixed to viewport, never scrolls */
-  /* Inset to match the chat area only (not sidebars) */
+  position: fixed;
   top: 0;
   bottom: 0;
-  /* We can't know exact left/right offsets at CSS level, so cover full viewport
-     and rely on the message-list overflow:hidden to clip it visually */
   left: 0;
   right: 0;
   background-image: var(--chat-bg-image);
@@ -84,4 +83,13 @@
   position: relative;
   z-index: 1;
   background: transparent !important;
+}
+/* Voice panel — all content above background */
+.voice-panel > *,
+.voice-header,
+.voice-participants,
+.voice-controls,
+.voice-mini-panel {
+  position: relative;
+  z-index: 1;
 }

@@ -67,6 +67,12 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
 
     const lastRead = getLastRead(id);
 
+    // For DMs: if this is the first time we're seeing this DM (no lastRead stored),
+    // initialize lastRead to now so old messages don't show as unread
+    const effectiveLastRead = (isDM && lastRead === 0)
+      ? (() => { saveLastRead(id); return Date.now(); })()
+      : lastRead;
+
     // Detect genuinely new messages (not first load) for sound
     if (!isInit && latestTs > prevMaxTs && latestTs > lastRead) {
       const newMsgs = msgs.filter(m => m.timestamp > prevMaxTs && m.timestamp > lastRead);
@@ -79,7 +85,7 @@ export default function GlobalUnreadWatcher({ channels, dms }: WatcherProps) {
     }
 
     maxTsCache.current[id] = Math.max(prevMaxTs, latestTs);
-    updateUnread(id, msgs, cur.id, cur.username ?? '', lastRead, isDM);
+    updateUnread(id, msgs, cur.id, cur.username ?? '', effectiveLastRead, isDM);
   };
 
   const subscribeId = (id: string, firestoreQuery: any, isDM: boolean) => {
