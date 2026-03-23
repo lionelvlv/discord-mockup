@@ -56,6 +56,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Notifications — users subscribe to their own via query, system creates them
+    match /notifications/{notifId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && resource.data.toUserId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.toUserId == request.auth.uid;
+    }
+
     // Custom emojis — anyone can read, uploader can create/delete, admin can delete any
     match /customEmojis/{emojiId} {
       allow read: if request.auth != null;

@@ -43,15 +43,23 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const [error, setError] = useState<string | null>(null);
+
   const doSearch = useCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); setOpen(false); return; }
+    if (!q.trim()) { setResults([]); setOpen(false); setError(null); return; }
     setLoading(true);
+    setError(null);
     try {
       const res = await searchChannelMessages(q, channels);
       setResults(res);
       setOpen(true);
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Search] Failed:', e);
+      const isIndex = e?.message?.includes('index') || e?.code === 'failed-precondition';
+      setError(isIndex
+        ? 'Search index is still building. Try again in a minute, or click the link in the browser console to create it.'
+        : 'Search failed. Please try again.');
+      setOpen(true);
     } finally {
       setLoading(false);
     }
@@ -61,7 +69,7 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
     const val = e.target.value;
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!val.trim()) { setResults([]); setOpen(false); return; }
+    if (!val.trim()) { setResults([]); setOpen(false); setError(null); return; }
     debounceRef.current = setTimeout(() => doSearch(val), 500);
   };
 
@@ -114,7 +122,7 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
         {query && !loading && (
           <button
             className="channel-search-clear"
-            onClick={() => { setQuery(''); setResults([]); setOpen(false); }}
+            onClick={() => { setQuery(''); setResults([]); setOpen(false); setError(null); }}
             aria-label="Clear"
           >✕</button>
         )}
@@ -122,7 +130,10 @@ const ChannelSearch: React.FC<Props> = ({ onNavigate }) => {
 
       {open && (
         <div className="channel-search-results panel">
-          {results.length === 0 && !loading && (
+          {error && (
+            <div className="search-no-results" style={{ color: '#c00' }}>{error}</div>
+          )}
+          {!error && results.length === 0 && !loading && (
             <div className="search-no-results">No messages found for "{query}"</div>
           )}
           {Object.entries(grouped).map(([channelId, msgs]) => (
