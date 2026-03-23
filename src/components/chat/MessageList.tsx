@@ -55,26 +55,31 @@ function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightC
   const usersById = useSharedUsers();
   const { user: currentUser } = useAuth();
 
-  // Track last-read timestamp per channel/DM so we can compute unread count
-  const lastReadRef = useRef<number>(Date.now());
+  // Persist last-read timestamps so unread state survives page reload
+  const lastReadRef = useRef<number>(() => {
+    if (!channelOrDMId) return 0;
+    try { return parseInt(localStorage.getItem(`lastRead:${channelOrDMId}`) ?? '0', 10); } catch { return 0; }
+  })();
 
-  // Mark read when the list is focused/visible and on mount
+  // Mark read when viewing this channel — save timestamp to localStorage
   useEffect(() => {
-    if (channelOrDMId) {
-      lastReadRef.current = Date.now();
-      markRead(channelOrDMId);
-    }
+    if (!channelOrDMId) return;
+    const now = Date.now();
+    lastReadRef.current = now;
+    try { localStorage.setItem(`lastRead:${channelOrDMId}`, String(now)); } catch {}
+    markRead(channelOrDMId);
   }, [channelOrDMId]);
 
-  // Update unread store and play sound only on @mention
+  // Update unread store and play mention sound immediately when new @mention arrives
   useEffect(() => {
     if (!currentUser || !channelOrDMId) return;
 
-    const isNewMessage = messages.length > prevMessageCount.current && prevMessageCount.current > 0;
+    const prevCount = prevMessageCount.current;
+    const isNewMessage = messages.length > prevCount && prevCount > 0;
 
     if (isNewMessage) {
-      // Check if any new messages mention current user
-      const newMsgs = messages.slice(prevMessageCount.current);
+      // New messages that mention current user → immediate sound
+      const newMsgs = messages.slice(prevCount);
       const hasMention = newMsgs.some(m =>
         m.senderId !== currentUser.id &&
         !m.deleted &&
@@ -85,8 +90,9 @@ function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightC
       }
     }
 
-    // Always update unread store (drives badges in sidebar)
+    // Always sync unread store — drives badges in sidebar
     updateUnread(channelOrDMId, messages, currentUser.id, currentUser.username ?? '', lastReadRef.current);
+    prevMessageCount.current = messages.length;
   }, [messages, currentUser, channelOrDMId]);
 
   // Scroll handling: instant on first load, smooth only for genuinely new messages
@@ -108,7 +114,6 @@ function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightC
       }
     }
 
-    prevMessageCount.current = messages.length;
   }, [messages, highlightMessageId]);
 
   // Reset on channel switch

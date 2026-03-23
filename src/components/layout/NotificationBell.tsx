@@ -14,6 +14,14 @@ const NotificationBell: React.FC<{ onNavigate?: () => void }> = ({ onNavigate })
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen]                   = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const bellRef  = useRef<HTMLButtonElement>(null);
+
+  // Compute fixed position anchored to bell button
+  const getPanelStyle = (): React.CSSProperties => {
+    if (!bellRef.current) return {};
+    const rect = bellRef.current.getBoundingClientRect();
+    return { top: rect.bottom + 6, right: window.innerWidth - rect.right };
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -50,6 +58,7 @@ const NotificationBell: React.FC<{ onNavigate?: () => void }> = ({ onNavigate })
   return (
     <div className="notif-bell-wrap" ref={panelRef}>
       <button
+        ref={bellRef}
         className={`notif-bell-btn button-95 ${unread > 0 ? 'has-unread' : ''}`}
         onClick={() => setOpen(v => !v)}
         title={unread > 0 ? `${unread} unread notification${unread > 1 ? 's' : ''}` : 'Notifications'}
@@ -60,7 +69,7 @@ const NotificationBell: React.FC<{ onNavigate?: () => void }> = ({ onNavigate })
       </button>
 
       {open && (
-        <div className="notif-panel panel">
+        <div className="notif-panel panel" style={getPanelStyle()}>
           <div className="notif-panel-header">
             <span className="pixel-font" style={{ fontSize: '8px' }}>NOTIFICATIONS</span>
             {unread > 0 && (
