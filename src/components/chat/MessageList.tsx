@@ -3,9 +3,6 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Message } from '../../types/message';
 import { User } from '../../types/user';
-import { soundManager } from '../../lib/sounds';
-import { updateUnread, markRead } from '../../features/chat/unreadStore';
-import { useAuth } from '../../features/auth/useAuth';
 import MessageItem from './MessageItem';
 import './MessageList.css';
 
@@ -53,48 +50,8 @@ function MessageList({ messages, channelOrDMId, highlightMessageId, onHighlightC
   const didScrollToHighlight = useRef(false);
   const [flashId, setFlashId] = useState<string | undefined>(undefined);
   const usersById = useSharedUsers();
-  const { user: currentUser } = useAuth();
 
-  // Persist last-read timestamps so unread state survives page reload
-  const storedLastRead = (() => {
-    if (!channelOrDMId) return 0;
-    try { return parseInt(localStorage.getItem(`lastRead:${channelOrDMId}`) ?? '0', 10); } catch { return 0; }
-  })();
-  const lastReadRef = useRef<number>(storedLastRead);
 
-  // Mark read when viewing this channel — save timestamp to localStorage
-  useEffect(() => {
-    if (!channelOrDMId) return;
-    const now = Date.now();
-    lastReadRef.current = now;
-    try { localStorage.setItem(`lastRead:${channelOrDMId}`, String(now)); } catch {}
-    markRead(channelOrDMId);
-  }, [channelOrDMId]);
-
-  // Update unread store and play mention sound immediately when new @mention arrives
-  useEffect(() => {
-    if (!currentUser || !channelOrDMId) return;
-
-    const prevCount = prevMessageCount.current;
-    const isNewMessage = messages.length > prevCount && prevCount > 0;
-
-    if (isNewMessage) {
-      // New messages that mention current user → immediate sound
-      const newMsgs = messages.slice(prevCount);
-      const hasMention = newMsgs.some(m =>
-        m.senderId !== currentUser.id &&
-        !m.deleted &&
-        m.content?.toLowerCase().includes(`@${currentUser.username?.toLowerCase()}`)
-      );
-      if (hasMention) {
-        soundManager.play('mention', 0.8);
-      }
-    }
-
-    // Always sync unread store — drives badges in sidebar
-    updateUnread(channelOrDMId, messages, currentUser.id, currentUser.username ?? '', lastReadRef.current);
-    prevMessageCount.current = messages.length;
-  }, [messages, currentUser, channelOrDMId]);
 
   // Scroll handling: instant on first load, smooth only for genuinely new messages
   useEffect(() => {

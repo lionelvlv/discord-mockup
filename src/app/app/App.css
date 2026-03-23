@@ -239,3 +239,33 @@
     background: var(--surface-2);
   }
 }
+
+/* ── Mobile keyboard fix ─────────────────────────────────────────────────── */
+/* Prevent the soft keyboard from scrolling/resizing the layout.
+   The message-list flex:1 shrinks naturally; composer stays at bottom. */
+@media (max-width: 768px) {
+  /* Each page (channel/DM) must be an exact-height flex column */
+  .channel-page,
+  .dm-page {
+    height: 100%;
+    max-height: 100%;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Message list gets all remaining space and scrolls internally */
+  .message-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Composer stays at its natural height, never pushed */
+  .message-composer {
+    flex-shrink: 0;
+  }
+}

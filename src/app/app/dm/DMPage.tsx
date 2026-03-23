@@ -8,6 +8,7 @@ import { User } from '../../../types/user';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import ChannelHeader from '../../../components/layout/ChannelHeader';
+import { setGlobalActiveId, saveLastRead } from '../../../components/chat/GlobalUnreadWatcher';
 import MessageList from '../../../components/chat/MessageList';
 import MessageComposer from '../../../components/chat/MessageComposer';
 import TypingIndicator from '../../../components/chat/TypingIndicator';
@@ -27,6 +28,12 @@ const DMPage: React.FC = () => {
   // Ref so the storage event handler always reads the current dmId without
   // needing to be recreated (avoids stale closure over the initial empty string)
   const dmIdRef = useRef<string>('');
+
+  // Tell the global watcher which DM is active (keyed by otherUserId)
+  useEffect(() => {
+    if (userId) { setGlobalActiveId(userId); saveLastRead(userId); }
+    return () => setGlobalActiveId(null);
+  }, [userId]);
 
   // Subscribe to the other user's Firestore doc in real-time.
   // This handles: user gets deleted mid-conversation, username/avatar changes, etc.

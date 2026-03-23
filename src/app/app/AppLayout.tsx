@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { VoiceProvider, useVoice } from '../../features/voice/VoiceContext';
 import LeftRail from '../../components/layout/LeftRail';
 import RightRail from '../../components/layout/RightRail';
 import UserPanel from '../../components/layout/UserPanel';
 import VoicePanel from '../../components/voice/VoicePanel';
+import GlobalUnreadWatcher from '../../components/chat/GlobalUnreadWatcher';
 import VoiceMiniPanel from '../../components/voice/VoiceMiniPanel';
 import ChannelPage from './channel/ChannelPage';
 import VoiceChannelPage from './voice/VoiceChannelPage';
 import DMPage from './dm/DMPage';
 import ProfileSettings from './settings/ProfileSettings';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import './App.css';
 
 type MobileTab = 'channels' | 'chat' | 'members' | 'call';
@@ -22,8 +25,33 @@ const AppInner: React.FC = () => {
 
   if (!user) return <Navigate to="/login" />;
 
+  // Global unread watcher — invisible, fires on all channels/DMs
+
   // Navigating to any text channel/DM/settings minimises the full-screen call.
   // Mobile: also switch to chat tab so the call doesn't stay blocking.
+  // Global unread watcher data
+  const [watchChannels, setWatchChannels] = useState<{ id: string }[]>([]);
+  const [watchDMs, setWatchDMs]           = useState<{ id: string; otherUserId: string }[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const uid = user.id;
+    const u1 = onSnapshot(collection(db, 'channels'), snap => {
+      setWatchChannels(
+        snap.docs.map(d => ({ id: d.id, ...d.data() } as any)).filter((c: any) => !c.isVoiceChannel)
+      );
+    });
+    const u2 = onSnapshot(collection(db, 'directMessages'), snap => {
+      setWatchDMs(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() } as any))
+          .filter((dm: any) => (dm.userA === uid || dm.userB === uid) && !dm.closedBy?.includes(uid))
+          .map((dm: any) => ({ id: dm.id, otherUserId: dm.userA === uid ? dm.userB : dm.userA }))
+      );
+    });
+    return () => { u1(); u2(); };
+  }, [user?.id]);
+
   const handleNavigate = () => {
     if (activeVoice && isExpanded) setExpanded(false);
     setMobileTab('chat');
@@ -43,6 +71,8 @@ const AppInner: React.FC = () => {
     : (isExpanded || isCallTab) ? 'fullscreen' : 'mini';
 
   return (
+    <>
+    <GlobalUnreadWatcher channels={watchChannels} dms={watchDMs} />
     <div className="app-layout" data-mobile-tab={mobileTab}>
 
       {/* ── Left rail ──────────────────────────────────────────────────────── */}
@@ -126,6 +156,7 @@ const AppInner: React.FC = () => {
         </button>
       </nav>
     </div>
+    </>
   );
 };
 

@@ -7,6 +7,7 @@ import { Message, Attachment } from '../../../types/message';
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import ChannelHeader from '../../../components/layout/ChannelHeader';
+import { setGlobalActiveId, saveLastRead } from '../../../components/chat/GlobalUnreadWatcher';
 import MessageList from '../../../components/chat/MessageList';
 import MessageComposer from '../../../components/chat/MessageComposer';
 import TypingIndicator from '../../../components/chat/TypingIndicator';
@@ -29,6 +30,12 @@ const ChannelPage: React.FC = () => {
   const [resolvedId, setResolvedId] = useState<string | null>(null);
   // If we have cached messages, skip the loading state — feel instant
   const [loading, setLoading] = useState(() => !messageCache.has(channelId ?? ''));
+
+  // Tell the global watcher which channel is active so it skips badging it
+  useEffect(() => {
+    if (resolvedId) { setGlobalActiveId(resolvedId); saveLastRead(resolvedId); }
+    return () => setGlobalActiveId(null);
+  }, [resolvedId]);
 
   // Resolve the channel — first try as a Firestore document ID, then fall back to
   // a name lookup. Once resolved we subscribe to the doc for live edits.
